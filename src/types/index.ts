@@ -69,6 +69,10 @@ export interface TaxiOption {
     popular?: boolean;
     description?: string;
     variants?: TaxiVariant[]; // All KM range variants
+    vehicleType?: string;
+    companyName?: string;
+    displayName?: string;
+    eta?: string;
 }
 
 // Taxi Card Props

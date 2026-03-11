@@ -12,7 +12,7 @@ const CompletePage: React.FC = () => {
         <div className="min-h-screen">
             <SEOHead
                 description="Professional minibus and coach hire across the UK. CRB checked drivers, vehicles from 8-72 passengers. Airport transfers, weddings, school trips & more."
-                keywords="minibus hire London, coach hire UK, minibus rental, airport transfers"
+                keywords="Coach Hire Compare, coach hire UK, minibus rental, airport transfers"
                 canonicalUrl="/"
             />
             {/* Hero Section with Booking Form */}

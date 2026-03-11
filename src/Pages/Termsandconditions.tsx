@@ -136,8 +136,8 @@ const TermsAndConditions: React.FC = () => {
     return (
         <>
             <SEOHead
-                title="Terms & Conditions - Minibus Hire London"
-                description="Read the terms and conditions for booking minibus and coach hire services with Minibus Hire London. Understand our booking policy, cancellations and passenger guidelines."
+                title="Terms & Conditions - Coach Hire Compare"
+                description="Read the terms and conditions for booking minibus and coach hire services with Coach Hire Compare. Understand our booking policy, cancellations and passenger guidelines."
                 keywords="minibus hire terms and conditions, booking policy, coach hire cancellation policy"
                 canonicalUrl="/terms"
                 noIndex={false}

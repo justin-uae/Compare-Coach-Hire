@@ -1,35 +1,36 @@
 import React from 'react';
-import { Search, Calendar, Key, CheckCircle } from 'lucide-react';
+import { FileText, MessageSquare, Star, ThumbsUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const HowItWorks: React.FC = () => {
     const steps = [
         {
             number: "01",
-            icon: <Calendar className="h-8 w-8" />,
-            title: "Pick Date & Time",
-            description: "Select your pickup and return dates with flexible scheduling options",
-            color: "from-orange-400 to-orange-500"
+            icon: <FileText className="h-8 w-8" />,
+            title: "Post Your Job for Free",
+            description: "Submit your coach hire requirements at no cost. Tell us your route, dates, and passenger count.",
+            color: "from-blue-600 to-blue-500"
         },
         {
             number: "02",
-            icon: <Search className="h-8 w-8" />,
-            title: "Choose Your Car",
-            description: "Browse our extensive fleet and select the perfect vehicle for your needs",
-            color: "from-orange-400 to-orange-500"
+            icon: <MessageSquare className="h-8 w-8" />,
+            title: "Get Company Quotes",
+            description: "Receive competitive quotes from multiple verified coach hire companies in your area.",
+            color: "from-blue-600 to-blue-500"
         },
         {
             number: "03",
-            icon: <Key className="h-8 w-8" />,
-            title: "Book Your Transport",
-            description: "Complete your reservation with our secure and easy booking process",
-            color: "from-green-400 to-green-500"
+            icon: <Star className="h-8 w-8" />,
+            title: "Review & Select",
+            description: "Compare ratings, reviews, and prices to choose the best coach hire company for your needs.",
+            color: "from-blue-600 to-blue-500"
         },
         {
             number: "04",
-            icon: <CheckCircle className="h-8 w-8" />,
-            title: "Start Your Journey",
-            description: "Pick up your car and enjoy a smooth, comfortable driving experience",
-            color: "from-purple-400 to-purple-500"
+            icon: <ThumbsUp className="h-8 w-8" />,
+            title: "Rate Your Company",
+            description: "After your journey, leave a review to help others find the best coach hire companies.",
+            color: "from-blue-600 to-blue-500"
         }
     ];
 
@@ -45,25 +46,22 @@ const HowItWorks: React.FC = () => {
             <div className="container mx-auto px-4 lg:px-8 relative z-10">
                 {/* Section Header */}
                 <div className="text-center mb-12 lg:mb-16">
-                    <div className="inline-block bg-orange-500/20 text-orange-400 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+                    <div className="inline-block bg-blue-500/20 text-blue-600 px-4 py-2 rounded-full text-sm font-semibold mb-4">
                         Simple Process
                     </div>
                     <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
                         How It Works
                     </h2>
                     <p className="text-gray-300 text-base lg:text-lg max-w-2xl mx-auto">
-                        Get on the road in just 4 easy steps. Our streamlined process makes booking your chauffeur-driven Transport quick and hassle-free.
+                        Our service is <span className="text-blue-600 font-semibold">100% free</span> for anyone looking for coach hire companies. Get quotes in just 4 easy steps.
                     </p>
                 </div>
 
                 {/* Steps */}
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
                     {steps.map((step, index) => (
-                        <div
-                            key={index}
-                            className="relative group"
-                        >
-                            {/* Connecting Line (hidden on mobile, shown on desktop) */}
+                        <div key={index} className="relative group">
+                            {/* Connecting Line */}
                             {index < steps.length - 1 && (
                                 <div className="hidden lg:block absolute top-20 left-[60%] w-full h-0.5 bg-gradient-to-r from-gray-600 to-gray-700 z-0">
                                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-l-8 border-l-gray-600"></div>
@@ -71,9 +69,9 @@ const HowItWorks: React.FC = () => {
                             )}
 
                             {/* Step Card */}
-                            <div className="relative bg-gradient-to-br from-gray-800 to-gray-700 rounded-2xl p-6 lg:p-8 border border-gray-600 hover:border-orange-500 transition-all duration-300 hover:-translate-y-2 group-hover:shadow-2xl group-hover:shadow-orange-500/20">
+                            <div className="relative bg-gradient-to-br from-gray-800 to-gray-700 rounded-2xl p-6 lg:p-8 border border-gray-600 hover:border-blue-500 transition-all duration-300 hover:-translate-y-2 group-hover:shadow-2xl group-hover:shadow-blue-500/20">
                                 {/* Step Number */}
-                                <div className="absolute -top-4 -right-4 w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                                <div className="absolute -top-4 -right-4 w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
                                     {step.number}
                                 </div>
 
@@ -92,6 +90,16 @@ const HowItWorks: React.FC = () => {
                             </div>
                         </div>
                     ))}
+                </div>
+
+                {/* Footer CTA */}
+                <div className="text-center mt-12">
+                    <p className="text-gray-600 text-base">
+                        Not ready to post a job?{" "}
+                        <Link to={'/contact'} className="text-blue-600 hover:text-blue-300 font-semibold underline underline-offset-2 transition-colors duration-200">
+                            Ask an expert.
+                        </Link>
+                    </p>
                 </div>
             </div>
         </section>

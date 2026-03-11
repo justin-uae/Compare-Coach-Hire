@@ -7,7 +7,7 @@ export const SHOPIFY_CONFIG = {
 // Shopify GraphQL endpoint
 export const SHOPIFY_GRAPHQL_URL = `https://${SHOPIFY_CONFIG.storeDomain}/api/${SHOPIFY_CONFIG.apiVersion}/graphql.json`;
 
-// Metafield namespaces for taxi options
+// Metafield namespaces
 export const METAFIELD_NAMESPACES = {
     TAXI_DETAILS: 'taxi_details',
     BOOKING_INFO: 'booking_info',
@@ -18,6 +18,7 @@ export const METAFIELD_NAMESPACES = {
 export const METAFIELD_KEYS = {
     // Taxi Details
     VEHICLE_TYPE: 'vehicle_type',
+    COMPANY_NAME: 'company_name',
     PASSENGERS: 'passengers',
     LUGGAGE: 'luggage',
     RATING: 'rating',

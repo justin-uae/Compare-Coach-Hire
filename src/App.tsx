@@ -15,13 +15,10 @@ import ScrollToTop from './Components/ScrollToTop';
 import OurFleet from './Pages/OurFleet';
 import CarRentalDetails from './Pages/CarRentalDetails';
 import CarRentalOptions from './Pages/CarRentalOptions';
-import CoachHireServices from './Pages/CoachHireServices';
-import MinibusHireServices from './Pages/MinibusHireServices';
-import BlogListing from './Pages/BlogListing';
-import BlogDetail from './Pages/BlogDetail';
 import TermsAndConditions from './Pages/Termsandconditions';
 import PrivacyPolicy from './Pages/PrivacyPolicy';
 import { WhatsAppButton } from './Components/WhatsAppButton';
+import AskAnExpert from './Components/AskAnExpert';
 
 function App() {
   return (
@@ -37,13 +34,10 @@ function App() {
             {/* <Route path="/login" element={<Login />} /> */}
             {/* <Route path="/register" element={<Register />} /> */}
             <Route path="/vehicles" element={<OurFleet />} />
+            <Route path="/askanexpert" element={<AskAnExpert />} />
             <Route path="/transport-options" element={<TaxiOptions />} />
             <Route path="/car-rental-options" element={<CarRentalOptions />} />
             <Route path="/car-rental/:carId" element={<CarRentalDetails />} />
-            <Route path="/coachhire" element={<CoachHireServices />} />
-            <Route path="/minibus" element={<MinibusHireServices />} />
-            <Route path="/blogs" element={<BlogListing />} />
-            <Route path="/viewBlog/:slug" element={<BlogDetail />} />
             <Route path="/payment" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
             <Route path="/terms" element={<TermsAndConditions />} />

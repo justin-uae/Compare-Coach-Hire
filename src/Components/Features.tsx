@@ -5,39 +5,39 @@ const Features: React.FC = () => {
     const features = [
         {
             icon: <Shield className="h-8 w-8" />,
-            title: "CRB Checked Drivers",
-            description: "All our drivers are fully CRB checked and professionally trained for your complete safety and peace of mind",
-            color: "from-orange-400 to-orange-500"
+            title: "100% Free Service",
+            description: "Our service costs you nothing. Post unlimited job requests and receive quotes from verified operators completely free of charge.",
+            color: "from-blue-600 to-blue-500"
         },
         {
             icon: <Users className="h-8 w-8" />,
-            title: "6 to 72 Passengers",
-            description: "Extensive fleet of minibuses and coaches to accommodate any group size, from small parties to large events",
-            color: "from-orange-400 to-orange-500"
+            title: "Hundreds of Operators",
+            description: "Access hundreds of vetted coach and minibus hire companies across the UK, all competing to give you the best deal.",
+            color: "from-blue-600 to-blue-500"
         },
         {
             icon: <Calendar className="h-8 w-8" />,
             title: "All Events Catered",
-            description: "Airport transfers, sports events, weddings, funerals, school trips, tours and excursions - we cover it all",
-            color: "from-green-400 to-green-500"
+            description: "Airport transfers, sports events, weddings, school trips, corporate travel and more — we connect you with the right operator for any occasion.",
+            color: "from-blue-600 to-blue-500"
         },
         {
             icon: <MapPin className="h-8 w-8" />,
             title: "Nationwide Coverage",
-            description: "Our service covers all areas across the UK - wherever you need to go, we'll get you there",
-            color: "from-purple-400 to-purple-500"
+            description: "Our network of operators covers every UK town and city. Wherever you need to go, we have a company ready to quote.",
+            color: "from-blue-600 to-blue-500"
         },
         {
             icon: <CheckCircle className="h-8 w-8" />,
-            title: "Affordable Rates",
-            description: "Competitive pricing for minibus and coach hire without compromising on quality or service",
-            color: "from-red-400 to-red-500"
+            title: "Quotes in Minutes",
+            description: "No more calling around or waiting for callbacks. Fill in one form and get competitive quotes from multiple companies within minutes.",
+            color: "from-blue-600 to-blue-500"
         },
         {
             icon: <Award className="h-8 w-8" />,
-            title: "Professional Service",
-            description: "Experienced team dedicated to making your journey comfortable, safe and stress-free every time",
-            color: "from-indigo-400 to-indigo-500"
+            title: "50+ Years Experience",
+            description: "Our team brings over 50 years of combined coach and minibus hire industry experience to help you find the right deal every time.",
+            color: "from-blue-600 to-blue-500"
         }
     ];
 
@@ -46,11 +46,14 @@ const Features: React.FC = () => {
             <div className="container mx-auto px-4 lg:px-8">
                 {/* Section Header */}
                 <div className="text-center mb-12 lg:mb-16">
+                    <div className="inline-block bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+                        Why Choose Us
+                    </div>
                     <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-                        Why Choose Minibus Hire London?
+                        Why Choose Coach Hire Compare?
                     </h2>
                     <p className="text-gray-600 text-base lg:text-lg max-w-2xl mx-auto">
-                        Affordable UK minibus and coach hire for all your travel needs. Experience reliable, professional transport for any occasion.
+                        The UK's largest coach and minibus hire comparison platform — saving you time and money on every group journey.
                     </p>
                 </div>
 
@@ -59,7 +62,7 @@ const Features: React.FC = () => {
                     {features.map((feature, index) => (
                         <div
                             key={index}
-                            className="group bg-white rounded-2xl p-6 lg:p-8 shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
+                            className="group bg-white rounded-2xl p-6 lg:p-8 shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-gray-100 hover:border-blue-200"
                         >
                             <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white mb-5 group-hover:scale-110 transition-transform duration-300`}>
                                 {feature.icon}

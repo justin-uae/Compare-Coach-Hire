@@ -1,109 +1,108 @@
 import React from 'react';
-import { Award, Users, Bus, Clock, Shield, TrendingUp, CheckCircle, Star, Heart, Zap, Target, MapPin } from 'lucide-react';
-import Banner from '../assets/Banner6.png';
+import { Award, Users, Clock, Shield, TrendingUp, CheckCircle, Star, Heart, Zap, Target, MapPin, Search, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SEOHead from '../Components/SEOHead';
 
 const AboutUs: React.FC = () => {
     const stats = [
-        { icon: Users, value: '50K+', label: 'Happy Passengers', color: 'from-orange-500 to-orange-600' },
-        { icon: Bus, value: '150+', label: 'Vehicles in Fleet', color: 'from-orange-500 to-orange-600' },
-        { icon: Clock, value: '24/7', label: 'Available Service', color: 'from-green-500 to-green-600' },
-        { icon: Award, value: '15+', label: 'Years Experience', color: 'from-purple-500 to-purple-600' }
+        { icon: Users, value: '100s', label: 'Operators Listed', color: 'from-blue-700 to-blue-600' },
+        { icon: Search, value: 'UK-Wide', label: 'Coverage', color: 'from-blue-700 to-blue-600' },
+        { icon: Clock, value: '100%', label: 'Free Service', color: 'from-green-700 to-green-600' },
+        { icon: Award, value: '50+', label: 'Years Experience', color: 'from-purple-700 to-purple-600' }
     ];
 
     const values = [
         {
             icon: Shield,
-            title: 'Safety First',
-            description: 'All our drivers are CRB checked, fully licensed, and insured. Our vehicles undergo regular safety inspections and maintenance.',
+            title: 'Verified Operators',
+            description: 'Every coach and minibus hire company in our network is vetted and verified, so you only receive quotes from reputable, reliable operators.',
             color: 'bg-green-100 text-green-600'
         },
         {
             icon: Heart,
-            title: 'Passenger Care',
-            description: 'We treat every passenger with respect and care, ensuring comfort throughout your journey with our professional drivers.',
+            title: 'Customer First',
+            description: 'Our entire platform is built around making your experience as simple and stress-free as possible — from posting a job to selecting your operator.',
             color: 'bg-red-100 text-red-600'
         },
         {
             icon: Zap,
-            title: 'Quick Response',
-            description: 'Fast booking, prompt arrival, and efficient service. We value your time with reliable, punctual transportation.',
+            title: 'Quotes in Minutes',
+            description: 'No more calling around or waiting for callbacks. Post your journey requirement once and receive competitive quotes from multiple operators within minutes.',
             color: 'bg-yellow-100 text-yellow-600'
         },
         {
             icon: Target,
-            title: 'Excellence',
-            description: 'We strive for excellence in every journey, from professional chauffeurs to well-maintained minibuses and coaches.',
-            color: 'bg-orange-100 text-orange-600'
+            title: 'Best Value',
+            description: 'With hundreds of operators competing for your business, you always get the most competitive prices and the best-reviewed companies in the market.',
+            color: 'bg-blue-100 text-blue-600'
         },
         {
             icon: MapPin,
             title: 'Nationwide Coverage',
-            description: 'Our service covers all areas across the UK, from London attractions to destinations throughout the country.',
+            description: 'Our operator network covers every UK town and city. Whether you need local or long-distance coach hire, we have a company ready to quote.',
             color: 'bg-purple-100 text-purple-600'
         },
         {
             icon: Star,
-            title: 'Quality Service',
-            description: 'Consistently delivering high-quality minibus and coach hire that exceeds expectations every single time.',
-            color: 'bg-orange-100 text-orange-600'
+            title: 'Rated & Reviewed',
+            description: 'Every operator is rated and reviewed by real customers, giving you full confidence to choose the best coach hire company for your journey.',
+            color: 'bg-blue-100 text-blue-600'
         }
     ];
 
     const milestones = [
-        { year: '2009', title: 'Founded', description: 'Minibus Hire London was established to provide quality minibus and coach hire services across the UK' },
-        { year: '2012', title: 'Fleet Expansion', description: 'Expanded our fleet to include vehicles from 8 to 72 passengers to cater for all group sizes' },
-        { year: '2016', title: 'Nationwide Service', description: 'Extended our coverage to provide minibus and coach hire services across all UK regions' },
-        { year: '2020', title: 'Safety Enhancement', description: 'Implemented enhanced CRB checking and safety protocols for all our professional drivers' },
-        { year: '2024', title: 'Market Leader', description: 'Became one of the UK\'s leading minibus and coach hire companies with 50,000+ satisfied passengers' }
+        { year: '2008', title: 'Founded', description: 'Coach Hire Compare was established with a mission to simplify the process of finding and booking reliable coach hire across the UK.' },
+        { year: '2011', title: 'Network Growth', description: 'Expanded our operator network to cover all major UK cities and regions, giving customers access to hundreds of verified companies.' },
+        { year: '2015', title: 'Quote Engine Launch', description: 'Launched our online quote engine, allowing customers to post jobs and receive multiple competitive quotes within minutes for free.' },
+        { year: '2019', title: 'Reviews System', description: 'Introduced our operator ratings and reviews system, helping customers make informed decisions based on genuine feedback.' },
+        { year: '2024', title: 'Market Leader', description: "Became the UK's largest coach hire comparison platform, connecting thousands of customers with hundreds of verified operators nationwide." }
     ];
 
     const features = [
-        'CRB Checked Professional Drivers',
-        'Vehicles from 8 to 72 Passengers',
+        '100% Free to Use',
+        'Unlimited Quote Requests',
+        'Hundreds of Verified Operators',
         'Airport Transfers',
         'Wedding & Funeral Transport',
-        'School Transportation',
-        'Sports Events',
-        'Corporate Events',
+        'School Trip Coaches',
+        'Sports & Corporate Events',
         'Tours & Excursions',
         'Stag & Hen Parties',
-        'Staff Transportation',
         'Long Distance Travel',
-        'Multiple Payment Options',
-        '24/7 Customer Support',
-        'Nationwide Coverage',
-        'Flexible Booking Options'
+        'Nationwide UK Coverage',
+        'Real Customer Reviews',
+        'Instant Quote Engine',
+        '50+ Years Combined Experience',
+        'No Hidden Fees'
     ];
 
     return (
         <>
             <SEOHead
-                title="About Us - Professional Minibus Hire Across the UK"
-                description="Learn about Minibus Hire London - our experienced team, CRB checked drivers, and commitment to safe, reliable group transport across the UK since day one."
-                keywords="about minibus hire London, professional minibus company UK, CRB checked drivers, reliable coach hire"
+                title="About Us - UK's Largest Coach Hire Comparison Website"
+                description="Learn about Coach Hire Compare — the UK's largest and fastest growing coach and minibus hire price comparison website. Free quotes from hundreds of verified operators across the UK."
+                keywords="about coach hire compare, UK coach hire comparison, free coach hire quotes, minibus hire comparison"
                 canonicalUrl="/about"
             />
             <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 pt-16">
+
                 {/* Hero Section */}
-                <div className="relative bg-gradient-to-r from-orange-600 to-orange-700 text-white py-20 md:py-28 overflow-hidden">
-                    {/* Animated background elements */}
+                <div className="relative bg-gradient-to-r from-blue-600 to-blue-700 text-white py-20 md:py-28 overflow-hidden">
                     <div className="absolute inset-0 opacity-10">
                         <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full blur-3xl animate-pulse"></div>
                         <div className="absolute bottom-10 right-10 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse delay-1000"></div>
                     </div>
-
                     <div className="container mx-auto px-4 relative z-10">
                         <div className="max-w-4xl mx-auto text-center">
                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 animate-fade-in">
-                                About Minibus Hire London
+                                About Coach Hire Compare
                             </h1>
-                            <p className="text-xl md:text-2xl text-orange-100 mb-8 animate-fade-in-delay">
-                                UK's Leading Minibus and Coach Hire Travel Agency
+                            <p className="text-xl md:text-2xl text-blue-100 mb-8 animate-fade-in-delay">
+                                The UK's Largest Coach & Minibus Hire Price Comparison Website
                             </p>
                             <p className="text-lg md:text-xl leading-relaxed max-w-3xl mx-auto animate-fade-in-delay-2">
-                                For over 15 years, we've been providing safe, reliable, and affordable minibus and coach hire services across the UK. From airport transfers to weddings, sports events to school trips - we've got you covered with professional drivers and vehicles from 8 to 72 passengers.
+                                We work with hundreds of operators across the UK to bring you the best coach hire deals — completely free.
+                                With over 50 years of combined industry experience, we make group travel easy, affordable, and stress-free.
                             </p>
                         </div>
                     </div>
@@ -137,33 +136,40 @@ const AboutUs: React.FC = () => {
                                 </h2>
                                 <div className="space-y-4 text-gray-700 leading-relaxed">
                                     <p>
-                                        Minibus Hire London was founded with a clear mission: to provide quality, affordable minibus and coach hire services that get you where you need to be in comfort and style. Whether it's a Transport to the airport, transportation to a wedding, or a group trip to a sporting event, we've built our reputation on reliability and professionalism.
+                                        Coach Hire Compare was built with one goal in mind: to make finding reliable, affordable coach and
+                                        minibus hire as simple as possible. We know that organising group travel can be time consuming and
+                                        expensive — so we created a platform that does all the hard work for you.
                                     </p>
                                     <p>
-                                        Our experienced drivers are all CRB checked and know London's famous attractions - from the Tower of London to Buckingham Palace - as well as off-the-beaten-path pubs, shows, theaters, and museums. With our insured and bonded drivers who undergo thorough background checks, you get complete peace of mind.
+                                        We are the UK's only website where filling in a single form connects you to the entire coach hire
+                                        market, getting you direct quotes from recommended operators within minutes. Our team brings over
+                                        50 years of combined experience in the industry to help you get the right deal every time.
                                     </p>
                                     <p>
-                                        Today, we serve over 50,000 passengers annually with a diverse fleet ranging from 8 to 72-seater vehicles. Our late-model, well-maintained fleet ensures the highest safety standards, while our state-of-the-art GPS and communication devices guarantee you arrive on time, every time.
+                                        Today, hundreds of operators across every UK town and city are part of our network. Whether you
+                                        need a minibus for a school trip or a fleet of coaches for a large corporate event, Coach Hire
+                                        Compare is the fastest and most cost-effective way to book — and it won't cost you a penny.
                                     </p>
                                 </div>
                             </div>
 
                             <div className="relative">
-                                <div className="aspect-square bg-gradient-to-br from-orange-100 to-orange-200 rounded-3xl overflow-hidden">
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <img
-                                            src={Banner}
-                                            alt="Minibus Hire London"
-                                            className="w-full h-full object-cover rounded-2xl shadow-2xl"
-                                        />
+                                <div className="aspect-square bg-gradient-to-br from-blue-100 to-blue-200 rounded-3xl flex items-center justify-center p-12">
+                                    <div className="text-center">
+                                        <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                                            <Search className="h-12 w-12 text-white" />
+                                        </div>
+                                        <p className="text-blue-700 font-black text-3xl mb-2">One Form.</p>
+                                        <p className="text-blue-600 font-black text-3xl mb-2">Hundreds of Quotes.</p>
+                                        <p className="text-blue-700 font-bold text-2xl">100% Free.</p>
                                     </div>
                                 </div>
                                 <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl shadow-xl p-6 max-w-xs">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <TrendingUp className="h-6 w-6 text-green-500" />
-                                        <span className="text-2xl font-bold text-gray-900">98%</span>
+                                        <TrendingUp className="h-6 w-6 text-green-700" />
+                                        <span className="text-2xl font-bold text-gray-900">6 in 10</span>
                                     </div>
-                                    <p className="text-sm text-gray-600">Customer Satisfaction Rate</p>
+                                    <p className="text-sm text-gray-600">People overpay for coach hire — we fix that</p>
                                 </div>
                             </div>
                         </div>
@@ -176,22 +182,24 @@ const AboutUs: React.FC = () => {
                         <div className="max-w-6xl mx-auto">
                             <div className="grid md:grid-cols-2 gap-12">
                                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-                                    <div className="w-14 h-14 bg-orange-500 rounded-2xl flex items-center justify-center mb-6">
+                                    <div className="w-14 h-14 bg-blue-700 rounded-2xl flex items-center justify-center mb-6">
                                         <Target className="h-7 w-7 text-white" />
                                     </div>
                                     <h3 className="text-2xl font-bold mb-4">Our Mission</h3>
                                     <p className="text-gray-300 leading-relaxed">
-                                        To provide safe, reliable, and affordable minibus and coach hire services across the UK. We take care of all the details so you can relax, sit back, and enjoy your journey with friends and family - because getting there is half the fun!
+                                        To provide a completely free, fast, and reliable platform that connects customers with the best
+                                        coach and minibus hire companies in the UK. We do all the legwork — so you don't have to call
+                                        around, send endless emails, or overpay for your group transport.
                                     </p>
                                 </div>
-
                                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-                                    <div className="w-14 h-14 bg-orange-500 rounded-2xl flex items-center justify-center mb-6">
+                                    <div className="w-14 h-14 bg-blue-700 rounded-2xl flex items-center justify-center mb-6">
                                         <MapPin className="h-7 w-7 text-white" />
                                     </div>
                                     <h3 className="text-2xl font-bold mb-4">Our Vision</h3>
                                     <p className="text-gray-300 leading-relaxed">
-                                        To be the UK's most trusted minibus and coach hire company, recognized for our professional service, well-maintained fleet, and commitment to getting every passenger to their destination safely and on time.
+                                        To be the UK's most trusted coach hire comparison platform — recognised for connecting customers
+                                        to the best-reviewed operators at the most competitive prices, across every town and city in the country.
                                     </p>
                                 </div>
                             </div>
@@ -204,13 +212,12 @@ const AboutUs: React.FC = () => {
                     <div className="max-w-6xl mx-auto">
                         <div className="text-center mb-12">
                             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                                Why Choose Us
+                                Why Choose Coach Hire Compare?
                             </h2>
                             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                                The values that make us the UK's leading minibus hire company
+                                The values and advantages that make us the UK's leading coach hire comparison platform.
                             </p>
                         </div>
-
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {values.map((value, index) => (
                                 <div
@@ -220,12 +227,8 @@ const AboutUs: React.FC = () => {
                                     <div className={`inline-flex items-center justify-center w-14 h-14 ${value.color} rounded-2xl mb-4`}>
                                         <value.icon className="h-7 w-7" />
                                     </div>
-                                    <h3 className="text-xl font-bold text-gray-900 mb-3">
-                                        {value.title}
-                                    </h3>
-                                    <p className="text-gray-600 leading-relaxed">
-                                        {value.description}
-                                    </p>
+                                    <h3 className="text-xl font-bold text-gray-900 mb-3">{value.title}</h3>
+                                    <p className="text-gray-600 leading-relaxed">{value.description}</p>
                                 </div>
                             ))}
                         </div>
@@ -233,7 +236,7 @@ const AboutUs: React.FC = () => {
                 </div>
 
                 {/* Timeline */}
-                <div className="bg-gradient-to-br from-orange-50 to-orange-100 py-16 md:py-20">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 py-16 md:py-20">
                     <div className="container mx-auto px-4">
                         <div className="max-w-4xl mx-auto">
                             <div className="text-center mb-12">
@@ -241,31 +244,23 @@ const AboutUs: React.FC = () => {
                                     Our Journey
                                 </h2>
                                 <p className="text-lg text-gray-600">
-                                    Key milestones in our growth story
+                                    Key milestones in building the UK's largest coach hire comparison platform
                                 </p>
                             </div>
-
                             <div className="space-y-8">
                                 {milestones.map((milestone, index) => (
-                                    <div
-                                        key={index}
-                                        className="flex gap-6 group"
-                                    >
+                                    <div key={index} className="flex gap-6 group">
                                         <div className="flex flex-col items-center">
-                                            <div className="w-16 h-16 bg-gradient-to-br from-orange-600 to-orange-700 rounded-full flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 transition-transform">
+                                            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 transition-transform text-sm">
                                                 {milestone.year}
                                             </div>
                                             {index !== milestones.length - 1 && (
-                                                <div className="w-0.5 h-full bg-orange-300 mt-2"></div>
+                                                <div className="w-0.5 h-full bg-blue-300 mt-2"></div>
                                             )}
                                         </div>
-                                        <div className="flex-1 bg-white rounded-2xl p-6 shadow-md group-hover:shadow-xl transition-all border border-orange-200">
-                                            <h3 className="text-xl font-bold text-gray-900 mb-2">
-                                                {milestone.title}
-                                            </h3>
-                                            <p className="text-gray-600">
-                                                {milestone.description}
-                                            </p>
+                                        <div className="flex-1 bg-white rounded-2xl p-6 shadow-md group-hover:shadow-xl transition-all border border-blue-200">
+                                            <h3 className="text-xl font-bold text-gray-900 mb-2">{milestone.title}</h3>
+                                            <p className="text-gray-600">{milestone.description}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -274,18 +269,17 @@ const AboutUs: React.FC = () => {
                     </div>
                 </div>
 
-                {/* What We Offer */}
+                {/* What We Cover */}
                 <div className="container mx-auto px-4 py-16 md:py-20">
                     <div className="max-w-6xl mx-auto">
                         <div className="text-center mb-12">
                             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                                Our Services
+                                What We Cover
                             </h2>
                             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                                Comprehensive minibus and coach hire services for all occasions
+                                From small minibuses to large coaches — we connect you with operators for every occasion across the UK.
                             </p>
                         </div>
-
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {features.map((feature, index) => (
                                 <div
@@ -293,7 +287,7 @@ const AboutUs: React.FC = () => {
                                     className="flex items-center gap-3 bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-all border border-gray-100"
                                 >
                                     <div className="flex-shrink-0">
-                                        <CheckCircle className="h-6 w-6 text-green-500" />
+                                        <CheckCircle className="h-6 w-6 text-green-700" />
                                     </div>
                                     <span className="text-gray-700 font-medium">{feature}</span>
                                 </div>
@@ -303,26 +297,27 @@ const AboutUs: React.FC = () => {
                 </div>
 
                 {/* CTA Section */}
-                <div className="bg-gradient-to-r from-orange-600 to-orange-700 text-white py-16">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-16">
                     <div className="container mx-auto px-4">
                         <div className="max-w-4xl mx-auto text-center">
                             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                                Ready to Travel in Comfort?
+                                Ready to Find the Best Coach Hire Deal?
                             </h2>
-                            <p className="text-xl text-orange-100 mb-8">
-                                Don't waste your gas, time, or mileage. Arrive in style with minimal effort - relax, sit back, and enjoy yourself with friends and family!
+                            <p className="text-xl text-blue-100 mb-8">
+                                Post your journey requirement for free and let our quote engine connect you with the best
+                                coach hire companies in minutes — no calls, no hassle, no cost.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-
-                                <Link to="/"
-                                    className="bg-white text-orange-600 font-bold py-4 px-8 rounded-xl hover:shadow-2xl hover:scale-105 transition-all inline-flex items-center justify-center gap-2"
+                                <Link
+                                    to="/"
+                                    className="bg-white text-blue-600 font-bold py-4 px-8 rounded-xl hover:shadow-2xl hover:scale-105 transition-all inline-flex items-center justify-center gap-2"
                                 >
-                                    <Bus className="h-5 w-5" />
-                                    Book a Transfer Now
+                                    <FileText className="h-5 w-5" />
+                                    Post Your Job for Free
                                 </Link>
-
-                                <Link to="/contact"
-                                    className="bg-orange-800 text-white font-bold py-4 px-8 rounded-xl hover:bg-orange-900 hover:shadow-2xl hover:scale-105 transition-all inline-flex items-center justify-center gap-2 border-2 border-white/20"
+                                <Link
+                                    to="/contact"
+                                    className="bg-blue-800 text-white font-bold py-4 px-8 rounded-xl hover:bg-blue-900 hover:shadow-2xl hover:scale-105 transition-all inline-flex items-center justify-center gap-2 border-2 border-white/20"
                                 >
                                     Contact Us
                                 </Link>
@@ -333,53 +328,21 @@ const AboutUs: React.FC = () => {
 
                 <style>{`
                 @keyframes fade-in {
-                    from {
-                        opacity: 0;
-                        transform: translateY(20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
-
                 @keyframes fade-in-delay {
-                    0%, 20% {
-                        opacity: 0;
-                        transform: translateY(20px);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+                    0%, 20% { opacity: 0; transform: translateY(20px); }
+                    100% { opacity: 1; transform: translateY(0); }
                 }
-
                 @keyframes fade-in-delay-2 {
-                    0%, 40% {
-                        opacity: 0;
-                        transform: translateY(20px);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+                    0%, 40% { opacity: 0; transform: translateY(20px); }
+                    100% { opacity: 1; transform: translateY(0); }
                 }
-
-                .animate-fade-in {
-                    animation: fade-in 1s ease-out forwards;
-                }
-
-                .animate-fade-in-delay {
-                    animation: fade-in-delay 1.2s ease-out forwards;
-                }
-
-                .animate-fade-in-delay-2 {
-                    animation: fade-in-delay-2 1.4s ease-out forwards;
-                }
-
-                .delay-1000 {
-                    animation-delay: 1s;
-                }
+                .animate-fade-in { animation: fade-in 1s ease-out forwards; }
+                .animate-fade-in-delay { animation: fade-in-delay 1.2s ease-out forwards; }
+                .animate-fade-in-delay-2 { animation: fade-in-delay-2 1.4s ease-out forwards; }
+                .delay-1000 { animation-delay: 1s; }
             `}</style>
             </div>
         </>

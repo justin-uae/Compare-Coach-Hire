@@ -12,8 +12,8 @@ interface SEOHeadProps {
     appendSiteName?: boolean;
 }
 
-const SITE_NAME = 'Minibus Hire London';
-const BASE_URL = 'https://minibushirelondon.org';
+const SITE_NAME = 'Coach Hire Compare';
+const BASE_URL = 'https://coachhirecompare.co.uk';
 const DEFAULT_IMAGE = `${BASE_URL}/og-image.jpg`;
 
 export default function SEOHead({

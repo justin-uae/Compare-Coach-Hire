@@ -1,20 +1,451 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Navigation, Lock, RefreshCw, AlertCircle, Plane } from 'lucide-react';
-import type { SearchDetails, TaxiOption } from '../types';
+import {
+    Navigation, Lock, RefreshCw, AlertCircle, Plane,
+    Users, Briefcase, Star, TrendingDown, BadgeCheck, Clock,
+    Zap, CheckCircle2, Shield, ChevronDown, ChevronUp,
+} from 'lucide-react';
+import type { SearchDetails } from '../types';
 import { useMobile } from '../hooks/useMobile';
 import TaxiHeader from '../Components/TaxiOptions/TaxiHeader';
 import MapView from '../Components/TaxiOptions/MapView';
 import Filters from '../Components/TaxiOptions/Filters';
-import TaxiCard from '../Components/TaxiOptions/TaxiCard';
-
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
-import { createCheckout } from '../store/slices/cartSlice';
-import { selectVariantByDistance } from '../utils/variantSelector';
+// import { createCheckout } from '../store/slices/cartSlice';
 import { formatDateDisplay } from '../utils/common';
 import SEOHead from '../Components/SEOHead';
 import { isAirportLocation } from '../services/shopifyCartService';
+
+//  Types 
+
+interface CompanyOffer {
+    company: string;
+    baseFare: number;   // metafield base_fare — used for display & tag assignment
+    price: number;      // distance-band variant price — used for checkout
+    currency: string;
+    rating: number;
+    reviews: number;
+    eta: string;
+    tag?: 'Best Price' | 'Top Rated' | 'Fastest';
+    variantId: string;
+    shopifyProductId: string;
+}
+
+interface TaxiOptionGrouped {
+    /** metafield vehicle_type, e.g. "5 Passenger" — used as the group key */
+    vehicleType: string;
+    /** Title prefix before " - ", e.g. "5 Seater Car" */
+    displayName: string;
+    passengers: number;
+    luggage: number;
+    popular: boolean;
+    image: string;
+    baseFare: number;
+    perKmRate: number;
+    rating: number;   // best rating across all offers
+    offers: CompanyOffer[];
+}
+
+//  Helpers 
+
+/**
+ * Parse "5 Seater Car - TransferEase"
+ * → { vehicleLabel: "5 Seater Car", company: "TransferEase" }
+ */
+function parseTitleParts(title: string): { vehicleLabel: string; company: string } {
+    const idx = title.lastIndexOf(' - ');
+    if (idx !== -1) {
+        return {
+            vehicleLabel: title.slice(0, idx).trim(),
+            company: title.slice(idx + 3).trim(),
+        };
+    }
+    return { vehicleLabel: title.trim(), company: title.trim() };
+}
+
+function parsePrice(price: any): number {
+    if (typeof price === 'object' && price !== null) return parseFloat(price.amount ?? '0');
+    return parseFloat(String(price ?? '0'));
+}
+
+/**
+ * Match a distance (miles) to the correct variant band.
+ * Variant titles: "0-10 miles", "11-20 miles", …, "491-500 miles"
+ * Ignores "Daily Rental - *" variants.
+ */
+function getVariantForDistance(variants: any[], distanceMiles: number): any | null {
+    if (!variants?.length) return null;
+
+    for (const v of variants) {
+        const match = v.title?.match(/^(\d+)-(\d+)\s*miles?$/i);
+        if (match) {
+            const min = parseInt(match[1], 10);
+            const max = parseInt(match[2], 10);
+            if (distanceMiles >= min && distanceMiles <= max) return v;
+        }
+    }
+
+    // Fallback: highest distance band
+    const distanceBands = variants.filter(v => /^\d+-\d+\s*miles?$/i.test(v.title ?? ''));
+    return distanceBands[distanceBands.length - 1] ?? null;
+}
+
+/**
+ * Group raw Shopify products by `vehicle_type` metafield.
+ * Each product = one company's offering for that vehicle type.
+ *
+ * shopifySlice should map metafields onto each product object:
+ *   product.vehicleType  ← metafield "vehicle_type"
+ *   product.passengers   ← metafield "passengers"
+ *   product.luggage      ← metafield "luggage"
+ *   product.popular      ← metafield (boolean)
+ *   product.rating       ← metafield "rating"
+ *   product.reviews      ← metafield "reviews"
+ *   product.eta          ← metafield "estimated_arrival"
+ *   product.baseFare     ← metafield "base_fare"
+ *   product.perKmRate    ← metafield "per_km_rate"
+ *   product.image        ← first product image URL
+ *   product.variants     ← variant array with id, title, price
+ *   product.shopifyId    ← product GID
+ */
+function groupProductsByVehicleType(
+    products: any[],
+    distanceMiles: number,
+): TaxiOptionGrouped[] {
+    const map = new Map<string, TaxiOptionGrouped>();
+
+    for (const product of products) {
+        const { vehicleLabel: titleLabel, company: titleCompany } = parseTitleParts(product.title ?? '');
+
+        // Group key: prefer metafield vehicleType / type, fall back to title prefix
+        const groupKey: string = product.vehicleType || product.type || titleLabel || 'Unknown';
+
+        // Company name: prefer dedicated metafield, fall back to title suffix
+        const company: string = product.companyName || titleCompany;
+
+        // Display name for image overlay
+        const displayName: string = product.displayName || titleLabel;
+
+        const variant = getVariantForDistance(product.variants ?? [], distanceMiles);
+        if (!variant) continue;
+
+        const price = parsePrice(variant.price);
+        if (price <= 0) continue;
+
+        const baseFareOffer = parseFloat(String(product.baseFare ?? product.base_fare ?? '0'));
+
+        const offer: CompanyOffer = {
+            company,
+            baseFare: baseFareOffer,
+            price,
+            currency: '£',
+            rating: parseFloat(String(product.rating ?? '4.5')),
+            reviews: parseInt(String(product.reviews ?? '0'), 10),
+            eta: String(product.eta ?? product.estimatedArrival ?? '5 min').replace(/^"|"$/g, ''),
+            variantId: variant.id,
+            shopifyProductId: product.shopifyProductId ?? product.shopifyId ?? product.id ?? '',
+        };
+
+        if (map.has(groupKey)) {
+            const group = map.get(groupKey)!;
+            group.offers.push(offer);
+            if (offer.rating > group.rating) group.rating = offer.rating;
+        } else {
+            map.set(groupKey, {
+                vehicleType: groupKey,
+                displayName,
+                passengers: parseInt(String(product.passengers ?? '4'), 10),
+                luggage: parseInt(String(product.luggage ?? '2'), 10),
+                popular: product.popular === true || product.popular === 'true',
+                image: product.image ?? '',
+                baseFare: baseFareOffer,
+                perKmRate: parseFloat(String(product.perKmRate ?? product.per_km_rate ?? '0')),
+                rating: offer.rating,
+                offers: [offer],
+            });
+        }
+    }
+
+    // Assign tags per group — based on baseFare (starting price)
+    for (const group of map.values()) {
+        for (const o of group.offers) o.tag = undefined;
+
+        const byBase = [...group.offers].sort((a, b) => a.baseFare - b.baseFare);
+        const byRating = [...group.offers].sort((a, b) => b.rating - a.rating);
+
+        if (byBase[0]) byBase[0].tag = 'Best Price';
+        if (byRating[0] && byRating[0].company !== byBase[0]?.company) {
+            byRating[0].tag = 'Top Rated';
+        }
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.passengers - b.passengers);
+}
+
+//  Company colour palette 
+
+const COMPANY_COLORS: Record<string, string> = {
+    TransferEase: '#f97316',
+    RideXpress: '#3b82f6',
+    LuxiCab: '#8b5cf6',
+    CityLink: '#10b981',
+};
+
+function companyColor(name: string): string {
+    if (COMPANY_COLORS[name]) return COMPANY_COLORS[name];
+    const key = Object.keys(COMPANY_COLORS).find(k =>
+        name.toLowerCase().includes(k.toLowerCase()),
+    );
+    return key ? COMPANY_COLORS[key] : '#6b7280';
+}
+
+//  Tag components 
+
+const TAG_STYLES: Record<string, string> = {
+    'Best Price': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    'Top Rated': 'bg-amber-50 text-amber-700 border-amber-200',
+    'Fastest': 'bg-sky-50 text-sky-700 border-sky-200',
+};
+const TAG_ICONS: Record<string, React.ReactNode> = {
+    'Best Price': <TrendingDown className="h-3 w-3" />,
+    'Top Rated': <BadgeCheck className="h-3 w-3" />,
+    'Fastest': <Zap className="h-3 w-3" />,
+};
+
+const TagPill: React.FC<{ tag?: string; isCheapest?: boolean }> = ({ tag, isCheapest }) => {
+    const resolved = tag ?? (isCheapest ? 'Best Price' : undefined);
+    if (!resolved || !TAG_STYLES[resolved]) return null;
+    return (
+        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TAG_STYLES[resolved]}`}>
+            {TAG_ICONS[resolved]} {resolved}
+        </span>
+    );
+};
+
+//  CompanyOfferRow 
+
+const CompanyOfferRow: React.FC<{
+    offer: CompanyOffer;
+    lowestBaseFare: number;
+    isSelected: boolean;
+    onSelect: () => void;
+    tripType?: 'one-way' | 'return';
+}> = ({ offer, lowestBaseFare, isSelected, onSelect, tripType }) => {
+    const isReturn = tripType === 'return';
+    // All prices shown to the user are return-trip aware
+    const displayFare = isReturn ? offer.baseFare * 2 : offer.baseFare;
+    const displayLowest = isReturn ? lowestBaseFare * 2 : lowestBaseFare;
+    const isCheapest = offer.baseFare === lowestBaseFare;
+    const color = companyColor(offer.company);
+    const diff = displayFare - displayLowest;
+
+    return (
+        <div
+            onClick={onSelect}
+            className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all duration-200 border-2
+                ${isSelected
+                    ? 'border-blue-600 bg-blue-50 shadow-sm'
+                    : isCheapest
+                        ? 'border-emerald-200 bg-emerald-50 hover:border-emerald-300'
+                        : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
+                }`}
+        >
+            <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-black shadow flex-shrink-0"
+                style={{ backgroundColor: color }}
+            >
+                {offer.company ? offer.company[0].toUpperCase() : '?'}
+            </div>
+
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-bold text-gray-900 truncate">{offer.company || 'Unknown'}</span>
+                    <TagPill tag={offer.tag} isCheapest={isCheapest && !offer.tag} />
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                    <Star className="h-3 w-3 fill-amber-600 text-amber-600" />
+                    <span className="text-[10px] font-semibold text-gray-500">{offer.rating}</span>
+                    <span className="text-gray-300 text-[10px]">·</span>
+                    <span className="text-[10px] text-gray-500">{offer.reviews} reviews</span>
+                    <span className="text-gray-300 text-[10px]">·</span>
+                    <Clock className="h-3 w-3 text-gray-400" />
+                    <span className="text-[10px] text-gray-500">{offer.eta}</span>
+                </div>
+            </div>
+
+            <div className="text-right flex-shrink-0">
+                <div className="text-[9px] text-gray-400 leading-none mb-0.5">{isReturn ? 'return' : 'from'}</div>
+                <div className={`text-base font-black ${isCheapest ? 'text-emerald-700' : 'text-gray-900'}`}>
+                    {offer.currency}{displayFare}
+                </div>
+                {diff > 0 && (
+                    <div className="text-[10px] text-red-500 font-semibold">+{offer.currency}{diff}</div>
+                )}
+            </div>
+
+            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
+                ${isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
+                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+            </div>
+        </div>
+    );
+};
+
+//  TaxiCard 
+
+const TaxiCard: React.FC<{
+    taxi: TaxiOptionGrouped;
+    selectedVehicleType: string | null;
+    selectedCompany: string | null;
+    tripType?: 'one-way' | 'return';
+    onSelectOffer: (vehicleType: string, company: string) => void;
+}> = ({ taxi, selectedVehicleType, selectedCompany, tripType, onSelectOffer }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    const sortedOffers = useMemo(
+        () => [...taxi.offers].sort((a, b) => a.baseFare - b.baseFare),
+        [taxi.offers],
+    );
+    const lowestBaseFare = sortedOffers[0]?.baseFare ?? 0;
+    const highestBaseFare = sortedOffers[sortedOffers.length - 1]?.baseFare ?? 0;
+    const isReturn = tripType === 'return';
+    const savings = (highestBaseFare - lowestBaseFare) * (isReturn ? 2 : 1);
+    const displayPrice = isReturn ? lowestBaseFare * 2 : lowestBaseFare;
+
+    const isGroupSelected = selectedVehicleType === taxi.vehicleType;
+    const visibleOffers = expanded ? sortedOffers : sortedOffers.slice(0, 2);
+
+    return (
+        <div className={`group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border-2
+            ${isGroupSelected ? 'border-blue-600 shadow-blue-100' : 'border-gray-100 hover:border-blue-200'}`}>
+
+            <div className="flex flex-col sm:flex-row">
+
+                {/* LEFT: Vehicle image */}
+                <div className="relative sm:w-48 md:w-56 sm:flex-shrink-0 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+
+                    {/* Mobile image */}
+                    <div className="sm:hidden w-full" style={{ paddingBottom: '52%', position: 'relative' }}>
+                        <img
+                            src={taxi.image}
+                            alt={taxi.displayName}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            style={{ objectPosition: 'center 30%' }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                        {taxi.popular && (
+                            <div className="absolute top-3 left-3 bg-blue-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow">
+                                Popular
+                            </div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 px-3 py-2.5">
+                            <h3 className="text-white font-black text-sm leading-tight">{taxi.displayName}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="flex items-center gap-1 text-white/80 text-[10px] font-semibold">
+                                    <Users className="h-3 w-3" />{taxi.passengers} pax
+                                </span>
+                                <span className="flex items-center gap-1 text-white/80 text-[10px] font-semibold">
+                                    <Briefcase className="h-3 w-3" />{taxi.luggage} bags
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Desktop image */}
+                    <div className="hidden sm:block absolute inset-0">
+                        <img
+                            src={taxi.image}
+                            alt={taxi.displayName}
+                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+                        {taxi.popular && (
+                            <div className="absolute top-3 left-3 bg-blue-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow">
+                                Popular
+                            </div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 px-3 py-3">
+                            <h3 className="text-white font-black text-sm leading-tight">{taxi.displayName}</h3>
+                            <p className="text-white/60 text-[10px] mt-0.5">{taxi.vehicleType}</p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                                <span className="flex items-center gap-1 text-white/80 text-[10px] font-semibold">
+                                    <Users className="h-3 w-3" />{taxi.passengers} pax
+                                </span>
+                                <span className="flex items-center gap-1 text-white/80 text-[10px] font-semibold">
+                                    <Briefcase className="h-3 w-3" />{taxi.luggage} bags
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="hidden sm:block" style={{ paddingBottom: '130%' }} />
+                </div>
+
+                {/* RIGHT: Company comparison — all real Shopify prices */}
+                <div className="flex-1 min-w-0 p-3 flex flex-col gap-2">
+
+                    {/* Header */}
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                        <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
+                            {taxi.offers.length} {taxi.offers.length === 1 ? 'Company' : 'Companies'}
+                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            {tripType === 'return' && (
+                                <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                                    ×2 return
+                                </span>
+                            )}
+                            <span className="text-[10px] text-gray-600 font-medium">
+                                From <span className="text-base font-black text-gray-900">£{displayPrice}</span>
+                            </span>
+                            {savings > 0 && (
+                                <span className="text-[10px] text-emerald-600 font-semibold">· save £{savings}</span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Offer rows */}
+                    <div className="space-y-1.5 flex-1">
+                        {visibleOffers.map(offer => (
+                            <CompanyOfferRow
+                                key={`${offer.shopifyProductId}-${offer.company}`}
+                                offer={offer}
+                                lowestBaseFare={lowestBaseFare}
+                                isSelected={isGroupSelected && selectedCompany === offer.company}
+                                onSelect={() => onSelectOffer(taxi.vehicleType, offer.company)}
+                                tripType={tripType}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Expand / collapse when >2 offers */}
+                    {sortedOffers.length > 2 && (
+                        <button
+                            onClick={() => setExpanded(!expanded)}
+                            className="flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold text-gray-400 hover:text-blue-600 transition-colors rounded-xl hover:bg-blue-50"
+                        >
+                            {expanded
+                                ? <><ChevronUp className="h-3.5 w-3.5" />Show less</>
+                                : <><ChevronDown className="h-3.5 w-3.5" />Show {sortedOffers.length - 2} more</>
+                            }
+                        </button>
+                    )}
+
+                    {/* Driver included */}
+                    <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg py-1.5 px-2.5 mt-auto">
+                        <svg className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span className="text-[10px] font-bold text-blue-700">Professional Driver Included</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+//  Main Page 
 
 const TaxiOptions: React.FC = () => {
     const location = useLocation();
@@ -22,227 +453,150 @@ const TaxiOptions: React.FC = () => {
     const isMobile = useMobile();
 
     const dispatch = useAppDispatch();
-    const { products: taxiOptions, loading, error, initialized } = useAppSelector((state) => state.shopify);
+    const { products: rawProducts, loading, error, initialized } = useAppSelector((state) => state.shopify);
     const { loading: checkoutLoading, error: checkoutError, checkoutUrl } = useAppSelector((state) => state.cart);
 
-    // State
     const [searchDetails, setSearchDetails] = useState<SearchDetails>({
-        from: "Heathrow Airport (LHR)",
-        to: "Central London",
-        fromCoords: { lat: 51.4700, lng: -0.4543 },
+        from: 'Heathrow Airport (LHR)',
+        to: 'Central London',
+        fromCoords: { lat: 51.470, lng: -0.4543 },
         toCoords: { lat: 51.5074, lng: -0.1278 },
         distance: 24.5,
-        duration: "45 mins",
-        date: "01/15/2025",
-        time: "10:00 AM",
-        passengers: 8
+        duration: '45 mins',
+        date: '01/15/2025',
+        time: '10:00 AM',
+        passengers: 4,
     });
 
-    const [selectedTaxi, setSelectedTaxi] = useState<number | null>(null);
+    // Selection is now keyed on vehicleType (group) + company
+    const [selectedVehicleType, setSelectedVehicleType] = useState<string | null>(null);
+    const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [sortBy, setSortBy] = useState<'price' | 'rating' | 'passengers'>('price');
+    const [parkingAcknowledged, setParkingAcknowledged] = useState(false);
+    const [flightNumber, setFlightNumber] = useState('');
 
-    // Airport-related states
-    const [parkingAcknowledged, setParkingAcknowledged] = useState<boolean>(false);
-    const [flightNumber, setFlightNumber] = useState<string>('');
+    const isAirportTrip = useMemo(() => (
+        isAirportLocation(searchDetails.from) || isAirportLocation(searchDetails.to)
+    ), [searchDetails.from, searchDetails.to]);
 
-    // Check if either location is an airport
-    const isAirportTrip = useMemo(() => {
-        return isAirportLocation(searchDetails.from) || isAirportLocation(searchDetails.to);
-    }, [searchDetails.from, searchDetails.to]);
+    const distance = searchDetails.distance || 18.5;
+    const duration = searchDetails.duration || '25 mins';
+    const requiredPassengers = searchDetails.passengers || 1;
 
-    // Fetch products from Shopify on mount
     useEffect(() => {
-        if (!initialized) {
-            dispatch(fetchTaxiProducts());
-        }
+        if (!initialized) dispatch(fetchTaxiProducts());
     }, [dispatch, initialized]);
 
-    // Redirect to Shopify checkout when URL is available
     useEffect(() => {
-        if (checkoutUrl) {
-            window.location.href = checkoutUrl;
-        }
+        if (checkoutUrl) window.location.href = checkoutUrl;
     }, [checkoutUrl]);
 
-    // Update search details from homepage
     useEffect(() => {
         if (location.state) {
             const state = location.state as SearchDetails;
-            setSearchDetails({
+            setSearchDetails(prev => ({
+                ...prev,
                 ...state,
-                fromCoords: state.fromCoords || { lat: 25.2532, lng: 55.3657 },
-                toCoords: state.toCoords || { lat: 25.1972, lng: 55.2744 },
-                distance: state.distance || 18.5,
-                duration: state.duration || "25 mins",
-                passengers: state.passengers || 1
-            });
+                fromCoords: state.fromCoords || prev.fromCoords,
+                toCoords: state.toCoords || prev.toCoords,
+            }));
         }
     }, [location]);
 
-    // Reset airport fields when taxi selection changes
     useEffect(() => {
-        if (selectedTaxi === null) {
+        if (selectedVehicleType === null) {
             setParkingAcknowledged(false);
             setFlightNumber('');
         }
-    }, [selectedTaxi]);
+    }, [selectedVehicleType]);
 
-    const distance = searchDetails.distance || 18.5;
-    const duration = searchDetails.duration || "25 mins";
-    const requiredPassengers = searchDetails.passengers || 1;
+    //  Group products by vehicle_type 
+    const vehicleGroups = useMemo(
+        () => groupProductsByVehicleType(rawProducts, distance),
+        [rawProducts, distance],
+    );
 
-    const taxiOptionsWithVariants = useMemo(() => {
-        if (!distance || distance <= 0) {
-            console.warn('No valid distance available');
-            return taxiOptions;
-        }
-
-        return taxiOptions
-            // Filter by passenger capacity FIRST
-            .filter(taxi => taxi.passengers >= requiredPassengers)
-            .map(taxi => {
-                // If no variants available, return taxi as-is
-                if (!taxi.variants || taxi.variants.length === 0) {
-                    console.warn(`No variants found for ${taxi.name}`);
-                    return taxi;
-                }
-
-                // Select the matching variant based on trip distance
-                const matchingVariant = selectVariantByDistance(taxi.variants, distance);
-
-                if (!matchingVariant) {
-                    console.warn(`No matching variant for ${taxi.name} at ${distance} miles`);
-                    return taxi;
-                }
-                // Return taxi with the selected variant
-                return {
-                    ...taxi,
-                    shopifyId: matchingVariant.id,
-                    selectedVariant: matchingVariant,
-                    displayPrice: matchingVariant.price // Use variant price instead of calculated
-                } as TaxiOption & { selectedVariant?: any; displayPrice?: number };
-            });
-    }, [taxiOptions, distance, requiredPassengers]);
-
-    // Calculate price helper function (now uses variant price if available)
-    const calculatePrice = (taxi: TaxiOption & { displayPrice?: number }, distance: number, tripType?: 'one-way' | 'return') => {
-        let basePrice = 0;
-
-        // If we have a variant price (from miles ranges), use it
-        if ('displayPrice' in taxi && taxi.displayPrice) {
-            basePrice = taxi.displayPrice;
-        } else {
-            // Otherwise calculate from base + per km
-            basePrice = Math.round(taxi.baseFare + (taxi.perKmRate * distance));
-        }
-
-        // Double for return trips (quantity = 2)
-        const actualTripType = tripType || searchDetails.tripType || 'one-way';
-        return actualTripType === 'return' ? basePrice * 2 : basePrice;
-    };
-
-    // Filter and sort taxi options
-    const filteredAndSortedTaxiOptions = [...taxiOptionsWithVariants]
-        .filter(taxi => {
-            // Exclude Luxury Limousine
-            if (taxi.type === 'Luxury Limousine') return false;
-
-            if (activeFilter === 'all') return true;
-            if (activeFilter === 'popular') return taxi.popular;
-            if (activeFilter === 'economy') return taxi.perKmRate <= 2.5;
-            if (activeFilter === 'premium') return taxi.perKmRate > 3.5;
-            return true;
-        })
-        .sort((a, b) => {
-            if (sortBy === 'price') {
-                const priceA = calculatePrice(a, distance);
-                const priceB = calculatePrice(b, distance);
-                return priceA - priceB;
-            } else if (sortBy === 'rating') {
-                return b.rating - a.rating;
-            } else {
+    //  Filter & sort 
+    const filteredVehicles = useMemo(() => {
+        return vehicleGroups
+            .filter(v => v.passengers >= requiredPassengers)
+            .filter(v => {
+                if (activeFilter === 'all') return true;
+                if (activeFilter === 'popular') return v.popular;
+                if (activeFilter === 'economy') return v.perKmRate <= 2.5;
+                if (activeFilter === 'premium') return v.perKmRate > 3.5;
+                return true;
+            })
+            .sort((a, b) => {
+                const aMin = Math.min(...a.offers.map(o => o.price));
+                const bMin = Math.min(...b.offers.map(o => o.price));
+                if (sortBy === 'price') return aMin - bMin;
+                if (sortBy === 'rating') return b.rating - a.rating;
                 return b.passengers - a.passengers;
-            }
-        });
+            });
+    }, [vehicleGroups, requiredPassengers, activeFilter, sortBy]);
 
-    // Event handlers
-    const handleBookNow = (taxiId: number) => {
-        setSelectedTaxi(taxiId);
+    //  Derived selection 
+    const selectedGroup = vehicleGroups.find(v => v.vehicleType === selectedVehicleType) ?? null;
+    const selectedOffer = selectedGroup?.offers.find(o => o.company === selectedCompany) ?? null;
+    const displayPrice = selectedOffer
+        ? (searchDetails.tripType === 'return' ? selectedOffer.baseFare * 2 : selectedOffer.baseFare)
+        : null;
+
+    //  Handlers 
+    const handleSelectOffer = (vehicleType: string, company: string) => {
+        if (selectedVehicleType === vehicleType && selectedCompany === company) {
+            // Deselect on second click
+            setSelectedVehicleType(null);
+            setSelectedCompany(null);
+        } else {
+            setSelectedVehicleType(vehicleType);
+            setSelectedCompany(company);
+        }
     };
 
     const handleProceedToPay = () => {
-        // Validate airport requirements
         if (isAirportTrip) {
-            if (!parkingAcknowledged) {
-                alert('Please acknowledge that parking fees will be collected separately.');
-                return;
-            }
-            if (!flightNumber.trim()) {
-                alert('Please enter your flight number for airport pickup/drop-off.');
-                return;
-            }
+            if (!parkingAcknowledged) { alert('Please acknowledge parking fees.'); return; }
+            if (!flightNumber.trim()) { alert('Please enter your flight number.'); return; }
         }
+        if (!selectedGroup || !selectedOffer) return;
 
-        const selectedTaxiData = taxiOptionsWithVariants.find(taxi => taxi.id === selectedTaxi);
-        if (selectedTaxiData) {
-            const tripType = searchDetails.tripType || 'one-way';
-            const totalPrice = calculatePrice(selectedTaxiData, distance, tripType);
+        console.log('Proceed to pay:', {
+            vehicle: selectedGroup.displayName,
+            vehicleType: selectedGroup.vehicleType,
+            company: selectedOffer.company,
+            variantId: selectedOffer.variantId,
+            price: displayPrice,
+            currency: selectedOffer.currency,
+        });
 
-            // Create cart item with airport details
-            const cartItem = {
-                taxi: selectedTaxiData,
-                search: {
-                    ...searchDetails,
-                    ...(isAirportTrip && {
-                        flightNumber: flightNumber.trim(),
-                        parkingAcknowledged: true
-                    })
-                },
-                totalPrice: totalPrice,
-                quantity: 1,
-            };
-
-            // Create checkout directly (no customer info needed for guest checkout)
-            dispatch(createCheckout({ item: cartItem }));
-        }
+        // Uncomment when ready:
+        // dispatch(createCheckout({ ... }));
     };
 
-    const handleEditSearch = () => {
-        navigate('/');
-    };
-
-    const handleRetry = () => {
-        dispatch(fetchTaxiProducts());
-    };
-
-    // Check if proceed button should be disabled
     const isProceedDisabled = () => {
-        if (checkoutLoading) return true;
-        if (!selectedTaxi) return true;
-        if (isAirportTrip) {
-            return !parkingAcknowledged || !flightNumber.trim();
-        }
+        if (checkoutLoading || !selectedVehicleType) return true;
+        if (isAirportTrip) return !parkingAcknowledged || !flightNumber.trim();
         return false;
     };
 
-    // Selected taxi data for booking bar
-    const selectedTaxiData = taxiOptionsWithVariants.find(t => t.id === selectedTaxi) || null;
-
-    // Loading state
+    //  Render: Loading 
     if (loading && !initialized) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
                 <div className="text-center">
-                    <RefreshCw className="h-12 w-12 text-orange-600 animate-spin mx-auto mb-4" />
+                    <RefreshCw className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-gray-900 mb-2">Loading Available Transport</h2>
-                    <p className="text-gray-600">Please wait while we fetch the latest options...</p>
+                    <p className="text-gray-600">Comparing prices across companies…</p>
                 </div>
             </div>
         );
     }
 
-    // Error state
+    //  Render: Error 
     if (error && !loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
@@ -251,17 +605,12 @@ const TaxiOptions: React.FC = () => {
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Oops! Something went wrong</h2>
                     <p className="text-gray-600 mb-6">{error}</p>
                     <div className="space-y-3">
-                        <button
-                            onClick={handleRetry}
-                            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                        >
-                            <RefreshCw className="h-5 w-5" />
-                            Try Again
+                        <button onClick={() => dispatch(fetchTaxiProducts())}
+                            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                            <RefreshCw className="h-5 w-5" /> Try Again
                         </button>
-                        <button
-                            onClick={() => navigate('/')}
-                            className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-xl hover:bg-gray-300 transition-all"
-                        >
+                        <button onClick={() => navigate('/')}
+                            className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-xl hover:bg-gray-300 transition-all">
                             Back to Home
                         </button>
                     </div>
@@ -270,8 +619,8 @@ const TaxiOptions: React.FC = () => {
         );
     }
 
-    // No products state
-    if (initialized && taxiOptionsWithVariants.length === 0 && !loading) {
+    //  Render: No products 
+    if (initialized && vehicleGroups.length === 0 && !loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
@@ -279,20 +628,14 @@ const TaxiOptions: React.FC = () => {
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">No Vehicles Available</h2>
                     <p className="text-gray-600 mb-6">
                         We couldn't find any vehicles that can accommodate {requiredPassengers} passenger{requiredPassengers > 1 ? 's' : ''}.
-                        Please try with fewer passengers or contact us for assistance.
                     </p>
                     <div className="space-y-3">
-                        <button
-                            onClick={handleRetry}
-                            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                        >
-                            <RefreshCw className="h-5 w-5" />
-                            Refresh
+                        <button onClick={() => dispatch(fetchTaxiProducts())}
+                            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                            <RefreshCw className="h-5 w-5" /> Refresh
                         </button>
-                        <button
-                            onClick={() => navigate('/')}
-                            className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-xl hover:bg-gray-300 transition-all"
-                        >
+                        <button onClick={() => navigate('/')}
+                            className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-xl hover:bg-gray-300 transition-all">
                             Change Search
                         </button>
                     </div>
@@ -305,187 +648,147 @@ const TaxiOptions: React.FC = () => {
         <>
             <SEOHead
                 title="Transport Options - UK Group Travel Solutions"
-                description="Discover all transport options available with Minibus Hire London. Airport transfers, day trips, events, school runs and more - tailored solutions for every journey."
+                description="Compare transfer prices from multiple companies. Airport transfers, day trips, events, school runs and more."
                 keywords="group transport options UK, minibus transport solutions, coach hire options, group travel UK"
                 canonicalUrl="/transport-options"
             />
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-16 pb-24">
+
                 {/* Fixed Header */}
                 <div className="bg-white shadow-lg sticky top-16 z-40 border-b border-gray-200">
                     <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
                         <TaxiHeader
                             searchDetails={searchDetails}
-                            onEditSearch={handleEditSearch}
+                            onEditSearch={() => navigate('/')}
                             isMobile={isMobile}
                         />
                     </div>
                 </div>
 
-                {/* Main Content */}
                 <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
-                    {/* Mobile Layout */}
+
+                    {/*  MOBILE  */}
                     {isMobile && (
                         <>
-                            {/* Map Section */}
                             <div className="mb-6 bg-white rounded-xl shadow-lg overflow-hidden">
                                 <div className="p-4 border-b border-gray-200">
                                     <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                        <Navigation className="h-4 w-4 text-orange-600" />
-                                        Route Map
+                                        <Navigation className="h-4 w-4 text-blue-600" /> Route Map
                                     </h2>
                                 </div>
                                 <div className="h-64 sm:h-80 p-2">
                                     <MapView
-                                        from={searchDetails.from}
-                                        to={searchDetails.to}
+                                        from={searchDetails.from} to={searchDetails.to}
                                         fromCoords={searchDetails.fromCoords || { lat: 25.2532, lng: 55.3657 }}
                                         toCoords={searchDetails.toCoords || { lat: 25.1972, lng: 55.2744 }}
-                                        distance={distance}
-                                        duration={duration}
-                                        selectedTaxiId={selectedTaxi}
+                                        distance={distance} duration={duration}
+                                        selectedTaxiId={selectedVehicleType ? 1 : null}
                                     />
                                 </div>
                             </div>
 
-                            {/* Airport Information - Mobile */}
-                            {isAirportTrip && selectedTaxi && (
-                                <div className="mb-4">
-                                    <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 space-y-3">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Plane className="h-5 w-5 text-orange-600" />
-                                            <h4 className="font-bold text-gray-900">Airport Trip Information</h4>
-                                        </div>
-
-                                        {/* Parking Fee Checkbox */}
-                                        <label className="flex items-start gap-3 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                checked={parkingAcknowledged}
-                                                onChange={(e) => setParkingAcknowledged(e.target.checked)}
-                                                className="mt-1 h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
-                                            />
-                                            <div className="flex-1">
-                                                <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
-                                                    I acknowledge that parking fees will be collected
-                                                </p>
-                                                <p className="text-xs text-gray-600 mt-1">
-                                                    Airport parking charges applicable
-                                                </p>
-                                            </div>
-                                        </label>
-
-                                        {/* Flight Number Input */}
+                            {isAirportTrip && selectedVehicleType && (
+                                <div className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-xl p-4 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Plane className="h-5 w-5 text-blue-600" />
+                                        <h4 className="font-bold text-gray-900">Airport Trip Information</h4>
+                                    </div>
+                                    <label className="flex items-start gap-3 cursor-pointer group">
+                                        <input type="checkbox" checked={parkingAcknowledged}
+                                            onChange={e => setParkingAcknowledged(e.target.checked)}
+                                            className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                                         <div>
-                                            <label className="block text-sm font-semibold text-gray-900 mb-2">
-                                                Flight Number <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={flightNumber}
-                                                onChange={(e) => setFlightNumber(e.target.value)}
-                                                placeholder="e.g., EK524, FZ123"
-                                                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm font-medium uppercase"
-                                                style={{ textTransform: 'uppercase' }}
-                                            />
-                                            <p className="text-xs text-gray-500 mt-1.5">
-                                                Required for airport pickup/drop-off tracking
+                                            <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                I acknowledge that parking fees will be collected
                                             </p>
+                                            <p className="text-xs text-gray-600 mt-1">Airport parking charges applicable</p>
                                         </div>
+                                    </label>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                            Flight Number <span className="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" value={flightNumber}
+                                            onChange={e => setFlightNumber(e.target.value.toUpperCase())}
+                                            placeholder="e.g., BA0245"
+                                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium uppercase" />
                                     </div>
                                 </div>
                             )}
 
-                            {/* Header */}
                             <div className="mb-4">
                                 <h1 className="text-xl font-bold text-gray-900 mb-1">
-                                    Available Transport ({filteredAndSortedTaxiOptions.length})
+                                    Available Transport ({filteredVehicles.length})
                                 </h1>
                                 <p className="text-gray-600 text-sm">
-                                    Showing vehicles for {requiredPassengers} passenger{requiredPassengers > 1 ? 's' : ''} • {distance.toFixed(1)} miles range
+                                    Comparing prices · {requiredPassengers} passenger{requiredPassengers > 1 ? 's' : ''} · {distance.toFixed(1)} miles
                                 </p>
                             </div>
 
-                            {/* Filters */}
-                            <Filters
-                                activeFilter={activeFilter}
-                                sortBy={sortBy}
-                                onFilterChange={setActiveFilter}
-                                onSortChange={setSortBy}
-                            />
+                            <Filters activeFilter={activeFilter} sortBy={sortBy}
+                                onFilterChange={setActiveFilter} onSortChange={setSortBy} />
 
-                            {/* Taxi Options List */}
-                            <div className="space-y-3">
-                                {filteredAndSortedTaxiOptions.map((taxi) => (
+                            <div className="space-y-4 mt-4">
+                                {filteredVehicles.map(taxi => (
                                     <TaxiCard
-                                        key={taxi.id}
+                                        key={taxi.vehicleType}
                                         taxi={taxi}
-                                        isSelected={selectedTaxi === taxi.id}
-                                        distance={distance}
-                                        duration={duration}
+                                        selectedVehicleType={selectedVehicleType}
+                                        selectedCompany={selectedVehicleType === taxi.vehicleType ? selectedCompany : null}
                                         tripType={searchDetails.tripType}
-                                        onSelect={setSelectedTaxi}
-                                        onBookNow={handleBookNow}
+                                        onSelectOffer={handleSelectOffer}
                                     />
                                 ))}
                             </div>
                         </>
                     )}
 
-                    {/* Desktop Layout */}
+                    {/*  DESKTOP  */}
                     {!isMobile && (
                         <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
-                            {/* Left Column - Taxi Options */}
+
+                            {/* Left: vehicle list */}
                             <div className="lg:col-span-2">
-                                {/* Header */}
                                 <div className="mb-6">
                                     <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                                        Available Transport <span className="text-orange-600">({filteredAndSortedTaxiOptions.length})</span>
+                                        Available Transport <span className="text-blue-600">({filteredVehicles.length})</span>
                                     </h1>
                                     <p className="text-gray-600 mb-4">
-                                        Showing vehicles for {requiredPassengers} passenger{requiredPassengers > 1 ? 's' : ''} • {distance.toFixed(1)} miles range
+                                        Comparing prices from multiple companies · {requiredPassengers} passenger{requiredPassengers > 1 ? 's' : ''} · {distance.toFixed(1)} miles
                                     </p>
-
-                                    {/* Filters */}
-                                    <Filters
-                                        activeFilter={activeFilter}
-                                        sortBy={sortBy}
-                                        onFilterChange={setActiveFilter}
-                                        onSortChange={setSortBy}
-                                    />
+                                    <Filters activeFilter={activeFilter} sortBy={sortBy}
+                                        onFilterChange={setActiveFilter} onSortChange={setSortBy} />
                                 </div>
 
-                                {/* Taxi Options List */}
                                 <div className="space-y-4">
-                                    {filteredAndSortedTaxiOptions.map((taxi) => (
+                                    {filteredVehicles.map(taxi => (
                                         <TaxiCard
-                                            key={taxi.id}
+                                            key={taxi.vehicleType}
                                             taxi={taxi}
-                                            isSelected={selectedTaxi === taxi.id}
-                                            distance={distance}
-                                            duration={duration}
+                                            selectedVehicleType={selectedVehicleType}
+                                            selectedCompany={selectedVehicleType === taxi.vehicleType ? selectedCompany : null}
                                             tripType={searchDetails.tripType}
-                                            onSelect={setSelectedTaxi}
-                                            onBookNow={handleBookNow}
+                                            onSelectOffer={handleSelectOffer}
                                         />
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Right Column - Map & Booking Summary */}
+                            {/* Right: Map + Booking Summary */}
                             <div className="lg:col-span-1">
                                 <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto space-y-4">
-                                    {/* Booking Summary - Show first when taxi is selected */}
-                                    {selectedTaxiData && (
-                                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-orange-500 animate-slideIn">
-                                            <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4 text-white">
+
+                                    {/* Booking summary */}
+                                    {selectedGroup && selectedOffer && (
+                                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-blue-500 animate-slideIn">
+                                            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white">
                                                 <h3 className="text-lg font-bold mb-1">Booking Summary</h3>
-                                                <p className="text-sm text-orange-100">
+                                                <p className="text-sm text-blue-100">
                                                     {searchDetails.tripType === 'return' ? 'Round Trip' : 'One-Way Trip'}
                                                 </p>
                                             </div>
 
                                             <div className="p-4 space-y-3">
-                                                {/* Checkout Error */}
                                                 {checkoutError && (
                                                     <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3 flex items-start gap-2">
                                                         <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
@@ -493,84 +796,79 @@ const TaxiOptions: React.FC = () => {
                                                     </div>
                                                 )}
 
-                                                {/* Airport Information Form - Desktop */}
                                                 {isAirportTrip && (
-                                                    <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 space-y-3">
+                                                    <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 space-y-3">
                                                         <div className="flex items-center gap-2 mb-2">
-                                                            <Plane className="h-5 w-5 text-orange-600" />
+                                                            <Plane className="h-5 w-5 text-blue-600" />
                                                             <h4 className="font-bold text-gray-900">Airport Trip Information</h4>
                                                         </div>
-
-                                                        {/* Parking Fee Checkbox */}
                                                         <label className="flex items-start gap-3 cursor-pointer group">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={parkingAcknowledged}
-                                                                onChange={(e) => setParkingAcknowledged(e.target.checked)}
-                                                                className="mt-1 h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
-                                                            />
-                                                            <div className="flex-1">
-                                                                <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
+                                                            <input type="checkbox" checked={parkingAcknowledged}
+                                                                onChange={e => setParkingAcknowledged(e.target.checked)}
+                                                                className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                                                                     I acknowledge that parking fees will be collected
                                                                 </p>
-                                                                <p className="text-xs text-gray-600 mt-1">
-                                                                    Airport parking charges applicable
-                                                                </p>
+                                                                <p className="text-xs text-gray-600 mt-1">Airport parking charges applicable</p>
                                                             </div>
                                                         </label>
-
-                                                        {/* Flight Number Input */}
                                                         <div>
                                                             <label className="block text-sm font-semibold text-gray-900 mb-2">
                                                                 Flight Number <span className="text-red-500">*</span>
                                                             </label>
-                                                            <input
-                                                                type="text"
-                                                                value={flightNumber}
-                                                                onChange={(e) => setFlightNumber(e.target.value)}
-                                                                placeholder="e.g., EK524, FZ123"
-                                                                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm font-medium uppercase"
-                                                                style={{ textTransform: 'uppercase' }}
-                                                            />
-                                                            <p className="text-xs text-gray-500 mt-1.5">
-                                                                Required for airport pickup/drop-off tracking
-                                                            </p>
+                                                            <input type="text" value={flightNumber}
+                                                                onChange={e => setFlightNumber(e.target.value.toUpperCase())}
+                                                                placeholder="e.g., BA0245"
+                                                                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium uppercase" />
                                                         </div>
                                                     </div>
                                                 )}
 
-                                                {/* Selected Vehicle */}
+                                                {/* Selected vehicle */}
                                                 <div>
                                                     <p className="text-xs text-gray-500 mb-2 uppercase font-semibold">Selected Vehicle</p>
                                                     <div className="flex items-center gap-3">
-                                                        <img
-                                                            src={selectedTaxiData.image}
-                                                            alt={selectedTaxiData.name}
-                                                            className="w-16 h-10 object-contain rounded-lg"
-                                                        />
+                                                        <img src={selectedGroup.image} alt={selectedGroup.displayName}
+                                                            className="w-16 h-10 object-cover rounded-lg" />
                                                         <div className="flex-1">
-                                                            <p className="font-bold text-gray-900">{selectedTaxiData.name}</p>
-                                                            <p className="text-xs text-gray-500">{selectedTaxiData.type}</p>
+                                                            <p className="font-bold text-gray-900">{selectedGroup.displayName}</p>
+                                                            <p className="text-xs text-gray-500">{selectedGroup.vehicleType}</p>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                {/* Journey Details */}
+                                                {/* Selected company */}
+                                                <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-black shadow flex-shrink-0"
+                                                        style={{ backgroundColor: companyColor(selectedOffer.company) }}>
+                                                        {selectedOffer.company[0]}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-sm font-bold text-gray-900">{selectedOffer.company}</p>
+                                                        <div className="flex items-center gap-1 mt-0.5">
+                                                            <Star className="h-3 w-3 fill-amber-600 text-amber-600" />
+                                                            <span className="text-xs text-gray-500">{selectedOffer.rating} · {selectedOffer.reviews} reviews</span>
+                                                        </div>
+                                                    </div>
+                                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                                                        <CheckCircle2 className="h-3 w-3" />Verified
+                                                    </span>
+                                                </div>
+
+                                                {/* Journey details */}
                                                 <div className="border-t border-gray-200 pt-3">
                                                     <p className="text-xs text-gray-500 mb-2 uppercase font-semibold">Journey Details</p>
                                                     <div className="space-y-1.5 text-sm">
                                                         {searchDetails.tripType === 'return' ? (
                                                             <>
-                                                                {/* Pickup */}
-                                                                <div className="bg-orange-50 p-2 rounded-lg">
-                                                                    <p className="text-xs font-semibold text-orange-700 mb-1">→ Pickup</p>
+                                                                <div className="bg-blue-50 p-2 rounded-lg">
+                                                                    <p className="text-xs font-semibold text-blue-700 mb-1">→ Pickup</p>
                                                                     <div className="text-xs text-gray-700">
-                                                                        <div> {formatDateDisplay(searchDetails.date)} at {searchDetails.time}</div>
+                                                                        <div>{formatDateDisplay(searchDetails.date)} at {searchDetails.time}</div>
                                                                         <div className="text-gray-500">{distance.toFixed(1)} miles</div>
                                                                     </div>
                                                                 </div>
-
-                                                                {/* Return */}
                                                                 {searchDetails.returnDate && (
                                                                     <div className="bg-green-50 p-2 rounded-lg">
                                                                         <p className="text-xs font-semibold text-green-700 mb-1">← Return</p>
@@ -600,102 +898,71 @@ const TaxiOptions: React.FC = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Price Breakdown */}
+                                                {/* Price breakdown */}
                                                 <div className="border-t border-gray-200 pt-3">
                                                     <p className="text-xs text-gray-500 mb-2 uppercase font-semibold">Price Breakdown</p>
                                                     <div className="space-y-1.5 text-sm">
                                                         {searchDetails.tripType === 'return' ? (
                                                             <>
                                                                 <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Pickup Trip ({distance.toFixed(1)} miles)</span>
-                                                                    <span className="font-semibold text-gray-900">
-                                                                        GBP {(calculatePrice(selectedTaxiData, distance, 'one-way'))}
-                                                                    </span>
+                                                                    <span className="text-gray-600">Outbound</span>
+                                                                    <span className="font-semibold text-gray-900">{selectedOffer.currency}{selectedOffer.baseFare}</span>
                                                                 </div>
                                                                 <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Return Trip ({distance.toFixed(1)} miles)</span>
-                                                                    <span className="font-semibold text-gray-900">
-                                                                        GBP {(calculatePrice(selectedTaxiData, distance, 'one-way'))}
-                                                                    </span>
+                                                                    <span className="text-gray-600">Return</span>
+                                                                    <span className="font-semibold text-gray-900">{selectedOffer.currency}{selectedOffer.baseFare}</span>
                                                                 </div>
-                                                                {!isAirportTrip && (
-                                                                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 mt-2">
-                                                                        <p className="text-xs text-orange-700 font-medium">
-                                                                            Parking fees (if applicable) will be added to the final amount
-                                                                        </p>
-                                                                    </div>
-                                                                )}
                                                                 <div className="flex justify-between pt-2 border-t border-gray-200">
-                                                                    <span className="font-bold text-gray-900">Total Amount</span>
-                                                                    <span className="text-xl font-bold text-orange-600">
-                                                                        GBP {calculatePrice(selectedTaxiData, distance, 'return')}
-                                                                    </span>
+                                                                    <span className="font-bold text-gray-900">Total</span>
+                                                                    <span className="text-xl font-bold text-blue-600">{selectedOffer.currency}{displayPrice}</span>
                                                                 </div>
                                                             </>
                                                         ) : (
-                                                            <>
-                                                                <div className="flex justify-between">
-                                                                    <span className="font-bold text-gray-900">Total Amount</span>
-                                                                    <span className="text-xl font-bold text-orange-600">
-                                                                        GBP {calculatePrice(selectedTaxiData, distance, 'one-way')}
-                                                                    </span>
-                                                                </div>
-                                                                {!isAirportTrip && (
-                                                                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 mt-2">
-                                                                        <p className="text-xs text-orange-700 font-medium">
-                                                                            Parking fees (if applicable) will be added to the final amount
-                                                                        </p>
-                                                                    </div>
-                                                                )}
-                                                            </>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-gray-900">Total</span>
+                                                                <span className="text-xl font-bold text-blue-600">{selectedOffer.currency}{displayPrice}</span>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                {/* Proceed to Pay Button */}
                                                 <button
                                                     onClick={handleProceedToPay}
                                                     disabled={isProceedDisabled()}
-                                                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-2xl hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 group mt-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-3.5 px-6 rounded-xl
+                                                        hover:shadow-2xl hover:shadow-blue-500/30 hover:scale-[1.02] transition-all duration-300
+                                                        flex items-center justify-center gap-3 mt-4
+                                                        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                                                 >
-                                                    {checkoutLoading ? (
-                                                        <>
-                                                            <RefreshCw className="h-5 w-5 animate-spin" />
-                                                            <span>Processing...</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Lock className="h-5 w-5" />
-                                                            <span>Proceed to Pay</span>
-                                                        </>
-                                                    )}
+                                                    {checkoutLoading
+                                                        ? <><RefreshCw className="h-5 w-5 animate-spin" /><span>Processing...</span></>
+                                                        : <><Lock className="h-5 w-5" /><span>Proceed to Pay</span></>
+                                                    }
                                                 </button>
-
+                                                <p className="text-center text-[10px] text-gray-600 flex items-center justify-center gap-1 mt-1">
+                                                    <Shield className="h-3 w-3" /> Secure SSL encrypted payment
+                                                </p>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Map - Show below booking summary or first if no taxi selected */}
+                                    {/* Map */}
                                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                                         <div className="p-4 border-b border-gray-200">
                                             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                                <Navigation className="h-5 w-5 text-orange-600" />
-                                                Route Map
+                                                <Navigation className="h-5 w-5 text-blue-600" /> Route Map
                                             </h2>
                                             <p className="text-gray-600 text-xs mt-1 truncate">
                                                 {searchDetails.from} → {searchDetails.to}
                                             </p>
                                         </div>
-
                                         <div className="h-[350px] p-3">
                                             <MapView
-                                                from={searchDetails.from}
-                                                to={searchDetails.to}
+                                                from={searchDetails.from} to={searchDetails.to}
                                                 fromCoords={searchDetails.fromCoords || { lat: 25.2532, lng: 55.3657 }}
                                                 toCoords={searchDetails.toCoords || { lat: 25.1972, lng: 55.2744 }}
-                                                distance={distance}
-                                                duration={duration}
-                                                selectedTaxiId={selectedTaxi}
+                                                distance={distance} duration={duration}
+                                                selectedTaxiId={selectedVehicleType ? 1 : null}
                                             />
                                         </div>
                                     </div>
@@ -705,90 +972,46 @@ const TaxiOptions: React.FC = () => {
                     )}
                 </div>
 
-                {/* Mobile Booking Bar - Updated with Proceed to Pay */}
-                {isMobile && selectedTaxiData && (
+                {/* Mobile bottom bar */}
+                {isMobile && selectedGroup && selectedOffer && (
                     <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-2xl z-50 animate-slideUp">
                         <div className="container mx-auto px-4 py-3">
-                            {/* Checkout Error */}
                             {checkoutError && (
                                 <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-start gap-2 mb-3">
                                     <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
                                     <p className="text-red-700 text-xs">{checkoutError}</p>
                                 </div>
                             )}
-
                             <div className="flex items-center justify-between gap-3 mb-2">
-                                <div className="flex-1">
-                                    <p className="text-xs text-gray-500 mb-1">Selected Vehicle</p>
-                                    <p className="font-bold text-gray-900 truncate text-sm">{selectedTaxiData.name}</p>
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-bold text-orange-600">
-                                            GBP {calculatePrice(selectedTaxiData, distance, searchDetails.tripType)}
-                                        </span>
-                                    </p>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-500 mb-0.5">Selected Vehicle</p>
+                                    <p className="font-bold text-gray-900 truncate text-sm">{selectedGroup.displayName}</p>
+                                    <p className="text-xs text-gray-500">{selectedOffer.company}</p>
+                                    <p className="text-sm font-black text-blue-600">{selectedOffer.currency}{displayPrice}</p>
                                 </div>
                                 <button
                                     onClick={handleProceedToPay}
                                     disabled={isProceedDisabled()}
-                                    className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-5 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                    className="bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-3 px-5 rounded-xl
+                                        hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap
+                                        disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                                 >
-                                    {checkoutLoading ? (
-                                        <>
-                                            <RefreshCw className="h-4 w-4 animate-spin" />
-                                            <span>Processing...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Lock className="h-4 w-4" />
-                                            <span>Proceed to Pay</span>
-                                        </>
-                                    )}
+                                    {checkoutLoading
+                                        ? <><RefreshCw className="h-4 w-4 animate-spin" /><span>Processing...</span></>
+                                        : <><Lock className="h-4 w-4" /><span>Proceed to Pay</span></>
+                                    }
                                 </button>
                             </div>
-
-                            {/* Parking Fee Notice - Only show for non-airport trips */}
-                            {!isAirportTrip && (
-                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-2">
-                                    <p className="text-[10px] text-orange-700 font-medium text-center">
-                                        Parking fees (if applicable) will be added
-                                    </p>
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
 
                 <style>{`
-                @keyframes slideIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
-                @keyframes slideUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(100%);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
-                .animate-slideIn {
-                    animation: slideIn 0.3s ease-out;
-                }
-
-                .animate-slideUp {
-                    animation: slideUp 0.3s ease-out;
-                }
-            `}</style>
+                    @keyframes slideIn { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+                    @keyframes slideUp { from { opacity:0; transform:translateY(100%); } to { opacity:1; transform:translateY(0); } }
+                    .animate-slideIn { animation: slideIn 0.3s ease-out; }
+                    .animate-slideUp { animation: slideUp 0.3s ease-out; }
+                `}</style>
             </div>
         </>
     );

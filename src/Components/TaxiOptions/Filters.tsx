@@ -11,7 +11,7 @@ const Filters: React.FC<FiltersProps> = ({ activeFilter, sortBy, onFilterChange,
                     <button
                         onClick={() => onFilterChange('all')}
                         className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${activeFilter === 'all'
-                            ? 'bg-orange-500 text-white'
+                            ? 'bg-blue-600 text-white'
                             : 'bg-white text-gray-700 border border-gray-300'}`}
                     >
                         All
@@ -34,7 +34,7 @@ const Filters: React.FC<FiltersProps> = ({ activeFilter, sortBy, onFilterChange,
             <button
                 onClick={() => onFilterChange('all')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeFilter === 'all'
-                    ? 'bg-orange-500 text-white shadow-md'
+                    ? 'bg-blue-600 text-white shadow-md'
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`}
             >
                 All Vehicles
@@ -43,7 +43,7 @@ const Filters: React.FC<FiltersProps> = ({ activeFilter, sortBy, onFilterChange,
                 <select
                     value={sortBy}
                     onChange={(e) => onSortChange(e.target.value as any)}
-                    className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600"
                 >
                     <option value="price">Sort by: Price (Low to High)</option>
                     <option value="passengers">Sort by: Seats</option>
