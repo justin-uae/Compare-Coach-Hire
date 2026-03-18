@@ -1,17 +1,18 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
     Users, Briefcase, Star, Loader, AlertCircle, RefreshCw,
-    ChevronDown, ChevronUp, TrendingDown, Shield, Clock, BadgeCheck, Zap,
+    ChevronDown, ChevronUp, TrendingDown, Shield, Clock, BadgeCheck,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
+import { companyColor, TagPill } from '../utils/common';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+//  Types 
 
 interface CompanyOffer {
     company: string;
-    baseFare: number;   // metafield base_fare — used for display in card & offer row
-    price: number;      // distance-band variant price — used for checkout
+    baseFare: any;
+    price: number;
     currency: string;
     rating: number;
     reviews: number;
@@ -22,9 +23,7 @@ interface CompanyOffer {
 }
 
 interface VehicleGroup {
-    /** Derived from metafield vehicle_type, e.g. "5 Passenger" */
     vehicleType: string;
-    /** Display label parsed from title prefix, e.g. "5 Seater Car" */
     displayName: string;
     passengers: number;
     luggage: number;
@@ -33,12 +32,8 @@ interface VehicleGroup {
     offers: CompanyOffer[];
 }
 
-//  Helpers
+// ─── Helpers 
 
-/**
- * Title format: "5 Seater Car - TransferEase"
- * Returns { vehicleLabel: "5 Seater Car", company: "TransferEase" }
- */
 function parseTitleParts(title: string): { vehicleLabel: string; company: string } {
     const idx = title.lastIndexOf(' - ');
     if (idx !== -1) {
@@ -50,16 +45,11 @@ function parseTitleParts(title: string): { vehicleLabel: string; company: string
     return { vehicleLabel: title.trim(), company: title.trim() };
 }
 
-/** Parse variant price regardless of whether Shopify returns a string or object */
 function parsePrice(price: any): number {
     if (typeof price === 'object' && price !== null) return parseFloat(price.amount ?? '0');
     return parseFloat(String(price ?? '0'));
 }
 
-/**
- * Given the trip distance (miles) and a product's variants
- * (titled "0-10 miles", "11-20 miles" …), return the matching variant.
- */
 function getVariantForDistance(variants: any[], distanceMiles: number): any | null {
     if (!variants?.length) return null;
 
@@ -72,63 +62,34 @@ function getVariantForDistance(variants: any[], distanceMiles: number): any | nu
         }
     }
 
-    // Fallback: last distance-band variant
     const distanceBands = variants.filter(v => /^\d+-\d+\s*miles?$/i.test(v.title ?? ''));
     return distanceBands[distanceBands.length - 1] ?? variants[variants.length - 1] ?? null;
 }
 
-/**
- * Group raw Shopify products by their `vehicle_type` metafield.
- *
- * Expected product shape from your shopifySlice:
- *   product.title       — "5 Seater Car - TransferEase"
- *   product.vehicleType — metafield value, e.g. "5 Passenger"   ← GROUP KEY
- *   product.passengers  — metafield integer
- *   product.luggage     — metafield integer
- *   product.popular     — metafield boolean / "true"
- *   product.rating      — metafield decimal
- *   product.reviews     — metafield integer
- *   product.eta         — metafield string, e.g. "5-7 mins"
- *   product.image       — first image URL
- *   product.variants    — Shopify variants array
- *   product.shopifyId   — product GID
- */
 function groupProductsByVehicleType(
     products: any[],
     distanceMiles: number,
 ): VehicleGroup[] {
-    // Map keyed by vehicle_type metafield value
     const map = new Map<string, VehicleGroup>();
 
     for (const product of products) {
-        //  Determine group key
-        // product.vehicleType  ← metafield "vehicle_type" (set by transformProduct)
-        // product.type         ← same value, legacy alias
-        // product.displayName  ← label parsed from title prefix, e.g. "5 Seater Car"
-        // Fallback chain ensures we never show "Unknown"
         const { vehicleLabel: titleLabel, company: titleCompany } = parseTitleParts(product.title ?? '');
         const groupKey: string = product.vehicleType || product.type || titleLabel || 'Unknown';
-
-        // company name: prefer dedicated metafield, fall back to title parse
         const company: string = product.companyName || titleCompany;
-
-        // displayName shown inside the card image overlay
         const displayName: string = product.displayName || titleLabel;
 
-        //  Find the correct distance-band variant
         const variant = getVariantForDistance(product.variants ?? [], distanceMiles);
         if (!variant) continue;
 
         const price = parsePrice(variant.price);
         if (price <= 0) continue;
 
-        //  Build a CompanyOffer for this product 
-        const baseFare = parseFloat(String(product.baseFare ?? product.base_fare ?? '0'));
+        const baseFare = parseFloat(String(product.baseFare ?? product.base_fare ?? '0')).toFixed(2);
 
         const offer: CompanyOffer = {
             company,
-            baseFare,               // shown in the card UI
-            price,                  // distance-band variant price — sent to checkout
+            baseFare,
+            price,
             currency: '£',
             rating: parseFloat(String(product.rating ?? '4.5')),
             reviews: parseInt(String(product.reviews ?? '0'), 10),
@@ -137,7 +98,6 @@ function groupProductsByVehicleType(
             shopifyProductId: product.shopifyProductId ?? product.shopifyId ?? product.id ?? '',
         };
 
-        //  Add to existing group or create a new one 
         if (map.has(groupKey)) {
             map.get(groupKey)!.offers.push(offer);
         } else {
@@ -153,13 +113,11 @@ function groupProductsByVehicleType(
         }
     }
 
-    //  Assign tags — based on baseFare (starting price) 
     for (const group of map.values()) {
         const byBase = [...group.offers].sort((a, b) => a.baseFare - b.baseFare);
         const cheapest = byBase[0];
         const topRated = [...group.offers].sort((a, b) => b.rating - a.rating)[0];
 
-        // Reset tags first
         for (const offer of group.offers) {
             offer.tag = undefined;
         }
@@ -168,46 +126,10 @@ function groupProductsByVehicleType(
         if (topRated && topRated.company !== cheapest?.company) topRated.tag = 'Top Rated';
     }
 
-    //  Sort groups by passenger count ascending 
     return Array.from(map.values()).sort((a, b) => a.passengers - b.passengers);
 }
 
-//  Company colour palette 
-
-const COMPANY_COLORS: Record<string, string> = {
-    TransferEase: '#ea580c',
-    RideXpress: '#2563eb',
-    LuxiCab: '#7c3aed',
-    CityLink: '#059669',
-};
-
-function companyColor(name: string): string {
-    if (COMPANY_COLORS[name]) return COMPANY_COLORS[name];
-    const key = Object.keys(COMPANY_COLORS).find(k =>
-        name.toLowerCase().includes(k.toLowerCase()),
-    );
-    return key ? COMPANY_COLORS[key] : '#6b7280';
-}
-
-//  TagPill 
-
-const TAG_CONFIG: Record<string, { cls: string; icon: React.ReactNode }> = {
-    'Best Price': { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: <TrendingDown className="h-2.5 w-2.5" /> },
-    'Top Rated': { cls: 'bg-amber-50 text-amber-700 border-amber-200', icon: <BadgeCheck className="h-2.5 w-2.5" /> },
-    'Fastest': { cls: 'bg-sky-50 text-sky-700 border-sky-200', icon: <Zap className="h-2.5 w-2.5" /> },
-};
-
-const TagPill: React.FC<{ tag?: string }> = ({ tag }) => {
-    if (!tag || !TAG_CONFIG[tag]) return null;
-    const { cls, icon } = TAG_CONFIG[tag];
-    return (
-        <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-wide ${cls}`}>
-            {icon}{tag}
-        </span>
-    );
-};
-
-//  OfferRow 
+// ─── OfferRow 
 
 const OfferRow: React.FC<{
     offer: CompanyOffer;
@@ -227,7 +149,6 @@ const OfferRow: React.FC<{
                     : 'border-transparent bg-gray-50/80 hover:bg-white hover:border-gray-200'
                 }`}
         >
-            {/* Avatar */}
             <div
                 className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-white text-xs font-black shadow-sm"
                 style={{ backgroundColor: color }}
@@ -235,7 +156,6 @@ const OfferRow: React.FC<{
                 {offer.company[0]}
             </div>
 
-            {/* Info */}
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                     <span className="text-[11px] font-bold text-gray-900">{offer.company}</span>
@@ -252,14 +172,13 @@ const OfferRow: React.FC<{
                 </div>
             </div>
 
-            {/* Price — shows baseFare (starting price) */}
             <div className="text-right flex-shrink-0">
-                <div className={`text-[9px] text-gray-400 leading-none mb-0.5`}>from</div>
+                <div className="text-[9px] text-gray-400 leading-none mb-0.5">from</div>
                 <div className={`text-base font-black ${isCheapest ? 'text-emerald-700' : 'text-gray-900'}`}>
                     {offer.currency}{offer.baseFare}
                 </div>
                 {diff > 0 && (
-                    <div className="text-[9px] text-red-400 font-semibold">+£{diff} more</div>
+                    <div className="text-[9px] text-red-400 font-semibold">+£{diff.toFixed(2)} more</div>
                 )}
             </div>
         </button>
@@ -270,9 +189,10 @@ const OfferRow: React.FC<{
 
 const VehicleCard: React.FC<{
     vehicle: VehicleGroup;
+    expanded: boolean;
+    onToggleExpand: () => void;
     onSelectOffer: (vehicle: VehicleGroup, offer: CompanyOffer) => void;
-}> = ({ vehicle, onSelectOffer }) => {
-    const [expanded, setExpanded] = useState(false);
+}> = ({ vehicle, expanded, onToggleExpand, onSelectOffer }) => {
 
     const sortedOffers = useMemo(
         () => [...vehicle.offers].sort((a, b) => a.baseFare - b.baseFare),
@@ -301,7 +221,6 @@ const VehicleCard: React.FC<{
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
 
-                {/* Badges */}
                 <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-[11px] font-bold text-gray-800 shadow">
                     {vehicle.vehicleType}
                 </div>
@@ -311,7 +230,6 @@ const VehicleCard: React.FC<{
                     </div>
                 )}
 
-                {/* Bottom bar */}
                 <div className="absolute bottom-0 left-0 right-0 px-4 py-3 flex items-end justify-between">
                     <div>
                         <h3 className="text-white font-black text-base leading-tight">{vehicle.displayName}</h3>
@@ -360,7 +278,7 @@ const VehicleCard: React.FC<{
 
                 {sortedOffers.length > 2 && (
                     <button
-                        onClick={() => setExpanded(!expanded)}
+                        onClick={onToggleExpand}                         // ← uses prop, not local state
                         className="flex items-center justify-center gap-1.5 mt-1 py-2 text-[11px] font-bold text-gray-500 hover:text-blue-600 transition-colors rounded-xl hover:bg-blue-50"
                     >
                         {expanded
@@ -388,6 +306,13 @@ const PopularCars: React.FC<PopularCarsProps> = ({
     const dispatch = useAppDispatch();
     const { products, loading, error, initialized } = useAppSelector((state) => state.shopify);
 
+    const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+
+    const toggleCard = useCallback((vehicleType: string) => {
+        setExpandedCards(prev => ({ ...prev, [vehicleType]: !prev[vehicleType] }));
+    }, []);
+    // 
+
     useEffect(() => {
         if (!initialized) dispatch(fetchTaxiProducts());
     }, [dispatch, initialized]);
@@ -397,13 +322,13 @@ const PopularCars: React.FC<PopularCarsProps> = ({
         [products, distanceMiles],
     );
 
-    const handleSelectOffer = (vehicle: VehicleGroup, offer: CompanyOffer) => {
+    const handleSelectOffer = useCallback((vehicle: VehicleGroup, offer: CompanyOffer) => {
         if (onBookOffer) {
             onBookOffer(vehicle, offer);
         } else {
             console.log('Book:', vehicle.displayName, '|', offer.company, '| £' + offer.price, '| variantId:', offer.variantId);
         }
-    };
+    }, [onBookOffer]);
 
     if (loading && !initialized) {
         return (
@@ -474,11 +399,13 @@ const PopularCars: React.FC<PopularCarsProps> = ({
 
                 {/* Grid */}
                 {vehicleGroups.length > 0 ? (
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
                         {vehicleGroups.map((group) => (
                             <VehicleCard
                                 key={group.vehicleType}
                                 vehicle={group}
+                                expanded={!!expandedCards[group.vehicleType]}
+                                onToggleExpand={() => toggleCard(group.vehicleType)}
                                 onSelectOffer={handleSelectOffer}
                             />
                         ))}

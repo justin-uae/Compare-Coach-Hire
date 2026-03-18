@@ -1,3 +1,6 @@
+import React from 'react';
+import { TrendingDown, BadgeCheck, Zap } from 'lucide-react';
+
 // Helper function to format date from MM/DD/YYYY to readable format
 export const formatDateDisplay = (dateString: string) => {
     const [month, day, year] = dateString.split('/').map(Number);
@@ -558,3 +561,73 @@ export const calculateRentalDays = (pickupDate: Date, dropoffDate: Date) => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(1, diffDays);
 };
+
+// Company Colours 
+
+export const COMPANY_COLORS: Record<string, string> = {
+    'A2B Coaches': '#ea580c', // orange
+    'Yes Coach Hire': '#2563eb', // blue
+    'Global Bus Rental': '#7c3aed', // violet
+    'Better Fares': '#059669', // emerald
+    'Nationwide Minibuses': '#db2777', // pink
+    'GB Coach Hire': '#0891b2', // cyan
+    'Ace Coaches': '#d97706', // amber
+    'Direct Coach Hire': '#dc2626', // red
+    'Smile Transport': '#16a34a', // green
+};
+
+/**
+ * Returns the brand colour for a given company name.
+ * Falls back to a neutral grey if the company is not found.
+ */
+export function companyColor(name: string): string {
+    if (COMPANY_COLORS[name]) return COMPANY_COLORS[name];
+    const key = Object.keys(COMPANY_COLORS).find(k =>
+        name.toLowerCase().includes(k.toLowerCase()),
+    );
+    return key ? COMPANY_COLORS[key] : '#6b7280';
+}
+
+//  Tag Pills
+export interface TagConfig {
+    cls: string;
+    icon: React.ReactNode;
+}
+
+export const TAG_CONFIG: Record<string, TagConfig> = {
+    'Best Price': {
+        cls: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        icon: React.createElement(TrendingDown, { className: 'h-2.5 w-2.5' }),
+    },
+    'Top Rated': {
+        cls: 'bg-amber-50 text-amber-700 border-amber-200',
+        icon: React.createElement(BadgeCheck, { className: 'h-2.5 w-2.5' }),
+    },
+    Fastest: {
+        cls: 'bg-sky-50 text-sky-700 border-sky-200',
+        icon: React.createElement(Zap, { className: 'h-2.5 w-2.5' }),
+    },
+};
+
+export const TagPill: React.FC<{ tag?: string; isCheapest?: boolean }> = ({ tag, isCheapest }) => {
+    const resolved = tag ?? (isCheapest ? 'Best Price' : undefined);
+    if (!resolved || !(resolved in TAG_CONFIG)) return null;
+    const { cls, icon } = TAG_CONFIG[resolved as string];
+    return (
+        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cls}`}>
+            {icon} {resolved}
+        </span>
+    );
+};
+
+export const companies = [
+    { name: 'A2B Coaches', initial: 'A', color: '#ea580c', rating: 4.8, price: 62, diff: 13, tag: 'Top Rated', tagCls: 'bg-amber-800/20 text-amber-400 border-amber-800/30' },
+    { name: 'Yes Coach Hire', initial: 'Y', color: '#2563eb', rating: 4.4, price: 49, diff: 0, tag: 'Best Price', tagCls: 'bg-emerald-800/20 text-emerald-400 border-emerald-800/30', best: true },
+    { name: 'Global Bus Rental', initial: 'G', color: '#7c3aed', rating: 4.6, price: 73, diff: 24, tag: null, tagCls: '' },
+    { name: 'Better Fares', initial: 'B', color: '#059669', rating: 4.3, price: 54, diff: 5, tag: 'Fastest', tagCls: 'bg-sky-800/20 text-sky-400 border-sky-800/30' },
+    { name: 'Nationwide Minibuses', initial: 'N', color: '#db2777', rating: 4.3, price: 58, diff: 9, tag: null, tagCls: '' },
+    { name: 'GB Coach Hire', initial: 'G', color: '#0891b2', rating: 4.6, price: 65, diff: 16, tag: null, tagCls: '' },
+    { name: 'Ace Coaches', initial: 'A', color: '#d97706', rating: 4.4, price: 69, diff: 20, tag: null, tagCls: '' },
+    { name: 'Direct Coach Hire', initial: 'D', color: '#dc2626', rating: 4.2, price: 71, diff: 22, tag: null, tagCls: '' },
+    { name: 'Smile Transport', initial: 'S', color: '#16a34a', rating: 4.5, price: 76, diff: 27, tag: null, tagCls: '' },
+];

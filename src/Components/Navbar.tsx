@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
-// import Logo from '../assets/Logo.png';
+import Logo from '../assets/Logo.png';
 
 const Navbar: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,11 +34,11 @@ const Navbar: React.FC = () => {
                         <Link to="/" className="flex items-center space-x-2 sm:space-x-3 group">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-blue-500/100/10 rounded-xl blur-sm group-hover:bg-blue-500/100/20 transition-all"></div>
-                                {/* <img
+                                <img
                                     src={Logo}
                                     alt="Coach Hire Compare Logo"
                                     className="h-10 sm:h-14 md:h-14 w-auto transition-transform duration-300 group-hover:scale-105 relative z-10"
-                                /> */}
+                                />
                             </div>
                             <h1 className="text-lg sm:text-xl font-bold text-white">
                                 Coach Hire<span className="text-blue-500"> Compare</span>
@@ -71,7 +71,7 @@ const Navbar: React.FC = () => {
                                     <span className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-blue-500"></span>
                                 )}
                             </Link>
-                            <Link
+                            {/* <Link
                                 to="/askanexpert"
                                 className={`font-medium transition-colors relative py-1 ${isActive('/askanexpert')
                                     ? 'text-blue-500'
@@ -82,7 +82,7 @@ const Navbar: React.FC = () => {
                                 {isActive('/askanexpert') && (
                                     <span className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-blue-500"></span>
                                 )}
-                            </Link>
+                            </Link> */}
                             <Link
                                 to="/about"
                                 className={`font-medium transition-colors relative py-1 ${isActive('/about')
@@ -153,36 +153,6 @@ const Navbar: React.FC = () => {
                                 >
                                     Vehicles
                                 </Link>
-                                {/* <Link
-                                    to="/coachhire"
-                                    onClick={handleLinkClick}
-                                    className={`py-3 px-4 rounded-lg font-medium transition-all ${isActive('/coachhire')
-                                        ? 'bg-blue-500/10 text-blue-500 border-l-4 border-blue-500'
-                                        : 'text-gray-300 hover:bg-gray-800/50 hover:text-blue-500'
-                                        }`}
-                                >
-                                    Coach Hire
-                                </Link> */}
-                                {/* <Link
-                                    to="/minibus"
-                                    onClick={handleLinkClick}
-                                    className={`py-3 px-4 rounded-lg font-medium transition-all ${isActive('/minibus')
-                                        ? 'bg-blue-500/10 text-blue-500 border-l-4 border-blue-500'
-                                        : 'text-gray-300 hover:bg-gray-800/50 hover:text-blue-500'
-                                        }`}
-                                >
-                                    Minibus Hire
-                                </Link> */}
-                                {/* <Link
-                                    to="/blogs"
-                                    onClick={handleLinkClick}
-                                    className={`py-3 px-4 rounded-lg font-medium transition-all ${isActive('/blogs')
-                                        ? 'bg-blue-500/10 text-blue-500 border-l-4 border-blue-500'
-                                        : 'text-gray-300 hover:bg-gray-800/50 hover:text-blue-500'
-                                        }`}
-                                >
-                                    Blog
-                                </Link> */}
                                 <Link
                                     to="/about"
                                     onClick={handleLinkClick}

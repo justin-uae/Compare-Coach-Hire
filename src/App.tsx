@@ -18,7 +18,7 @@ import CarRentalOptions from './Pages/CarRentalOptions';
 import TermsAndConditions from './Pages/Termsandconditions';
 import PrivacyPolicy from './Pages/PrivacyPolicy';
 import { WhatsAppButton } from './Components/WhatsAppButton';
-import AskAnExpert from './Components/AskAnExpert';
+// import AskAnExpert from './Components/AskAnExpert';
 
 function App() {
   return (
@@ -34,7 +34,7 @@ function App() {
             {/* <Route path="/login" element={<Login />} /> */}
             {/* <Route path="/register" element={<Register />} /> */}
             <Route path="/vehicles" element={<OurFleet />} />
-            <Route path="/askanexpert" element={<AskAnExpert />} />
+            {/* <Route path="/askanexpert" element={<AskAnExpert />} /> */}
             <Route path="/transport-options" element={<TaxiOptions />} />
             <Route path="/car-rental-options" element={<CarRentalOptions />} />
             <Route path="/car-rental/:carId" element={<CarRentalDetails />} />

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Calendar, MapPin, RefreshCw, AlertCircle, Lock,
-    Users, Briefcase, Star, Clock, TrendingDown, BadgeCheck, Zap,
+    Users, Briefcase, Star, Clock,
     ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useMobile } from '../hooks/useMobile';
@@ -10,7 +10,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
 import { createCheckout } from '../store/slices/cartSlice';
 import type { SearchDetails } from '../types';
-import { formatDateDisplay } from '../utils/common';
+import { companyColor, formatDateDisplay, TagPill } from '../utils/common';
 import SEOHead from '../Components/SEOHead';
 
 //  Types
@@ -21,17 +21,16 @@ interface RentalDetails {
     pickupCoords: { lat: number; lng: number } | null;
     date: string;
     time: string;
-    dropoffDate: string;
-    dropoffTime: string;
-    rentalHours: number;
-    rentalDays: number;
+    rentalPeriod: string;   // e.g. "Half Day (5 hrs)" | "1 Day (10 hrs)" | "3 Days (30 hrs)"
+    rentalHours: number;    // total driver hours
+    rentalDays: number;     // 0.5 for half-day, N for full days
     passengers: number;
 }
 
 interface CompanyOffer {
     company: string;
-    baseFare: number;       // metafield base_fare — display price
-    rentalPrice: number;    // variant price (Half Day / Full Day) — checkout price
+    baseFare: number;
+    rentalPrice: number;
     currency: string;
     rating: number;
     reviews: number;
@@ -42,20 +41,20 @@ interface CompanyOffer {
 }
 
 interface RentalVehicleGroup {
-    vehicleType: string;    // metafield vehicle_type — group key
-    displayName: string;    // parsed from title prefix
+    vehicleType: string;
+    displayName: string;
     passengers: number;
     luggage: number;
     popular: boolean;
     image: string;
-    rating: number;         // best rating across offers
-    reviews: number;        // total reviews across offers
-    rentalType: string;     // "Half Day" | "Full Day" | "N Days"
-    quantity: number;       // days for multi-day
+    rating: number;
+    reviews: number;
+    rentalType: string;
+    quantity: number;
     offers: CompanyOffer[];
 }
 
-//  Helpers 
+//  Helpers
 
 function parseTitleParts(title: string): { vehicleLabel: string; company: string } {
     const idx = title.lastIndexOf(' - ');
@@ -70,7 +69,6 @@ function parsePrice(price: any): number {
     return parseFloat(String(price ?? '0'));
 }
 
-/** Find Half Day or Full Day variant */
 function getRentalVariant(variants: any[], type: 'half' | 'full'): any | null {
     if (!variants?.length) return null;
     return variants.find((v: any) => {
@@ -80,23 +78,17 @@ function getRentalVariant(variants: any[], type: 'half' | 'full'): any | null {
     }) ?? null;
 }
 
-/**
- * Group products by vehicleType metafield for rental view.
- * Each product = one company's offering for that vehicle type.
- */
 function groupProductsForRental(
     products: any[],
     rentalHours: number,
 ): RentalVehicleGroup[] {
     const map = new Map<string, RentalVehicleGroup>();
 
-    // Determine rental tier from hours
     const isHalfDay = rentalHours <= 5;
     const isMultiDay = rentalHours >= 24;
-    const numberOfDays = isMultiDay ? Math.ceil(rentalHours / 24) : 1;
+    const numberOfDays = isMultiDay ? Math.ceil(rentalHours / 10) : 1; // 10 hrs = 1 full day
 
     for (const product of products) {
-        // Only include products that have daily rental variants
         const hasRentalVariant = product.variants?.some(
             (v: any) => (v.title ?? '').toLowerCase().includes('daily rental')
         );
@@ -107,7 +99,6 @@ function groupProductsForRental(
         const company: string = product.companyName || titleCompany;
         const displayName: string = product.displayName || titleLabel;
 
-        // Find the right variant
         const halfVariant = getRentalVariant(product.variants, 'half');
         const fullVariant = getRentalVariant(product.variants, 'full');
         const halfPrice = parsePrice(halfVariant?.price);
@@ -173,13 +164,10 @@ function groupProductsForRental(
         }
     }
 
-    // Assign tags per group — cheapest rentalPrice = Best Price
     for (const group of map.values()) {
         for (const o of group.offers) o.tag = undefined;
-
         const byPrice = [...group.offers].sort((a, b) => a.rentalPrice - b.rentalPrice);
         const byRating = [...group.offers].sort((a, b) => b.rating - a.rating);
-
         if (byPrice[0]) byPrice[0].tag = 'Best Price';
         if (byRating[0] && byRating[0].company !== byPrice[0]?.company) byRating[0].tag = 'Top Rated';
     }
@@ -187,45 +175,7 @@ function groupProductsForRental(
     return Array.from(map.values()).sort((a, b) => a.passengers - b.passengers);
 }
 
-//  Company colours 
-
-const COMPANY_COLORS: Record<string, string> = {
-    TransferEase: '#f97316',
-    RideXpress: '#3b82f6',
-    LuxiCab: '#8b5cf6',
-    CityLink: '#10b981',
-};
-
-function companyColor(name: string): string {
-    if (COMPANY_COLORS[name]) return COMPANY_COLORS[name];
-    const key = Object.keys(COMPANY_COLORS).find(k => name.toLowerCase().includes(k.toLowerCase()));
-    return key ? COMPANY_COLORS[key] : '#6b7280';
-}
-
-//  Tag pill 
-
-const TAG_STYLES: Record<string, string> = {
-    'Best Price': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'Top Rated': 'bg-amber-50 text-amber-700 border-amber-200',
-    'Fastest': 'bg-sky-50 text-sky-700 border-sky-200',
-};
-const TAG_ICONS: Record<string, React.ReactNode> = {
-    'Best Price': <TrendingDown className="h-3 w-3" />,
-    'Top Rated': <BadgeCheck className="h-3 w-3" />,
-    'Fastest': <Zap className="h-3 w-3" />,
-};
-
-const TagPill: React.FC<{ tag?: string; isCheapest?: boolean }> = ({ tag, isCheapest }) => {
-    const resolved = tag ?? (isCheapest ? 'Best Price' : undefined);
-    if (!resolved || !TAG_STYLES[resolved]) return null;
-    return (
-        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TAG_STYLES[resolved]}`}>
-            {TAG_ICONS[resolved]} {resolved}
-        </span>
-    );
-};
-
-//  CompanyOfferRow 
+//  CompanyOfferRow
 
 const CompanyOfferRow: React.FC<{
     offer: CompanyOffer;
@@ -248,7 +198,6 @@ const CompanyOfferRow: React.FC<{
                         : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
                 }`}
         >
-            {/* Avatar */}
             <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-black shadow flex-shrink-0"
                 style={{ backgroundColor: color }}
@@ -256,7 +205,6 @@ const CompanyOfferRow: React.FC<{
                 {offer.company ? offer.company[0].toUpperCase() : '?'}
             </div>
 
-            {/* Info */}
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-xs font-bold text-gray-900 truncate">{offer.company || 'Unknown'}</span>
@@ -270,7 +218,6 @@ const CompanyOfferRow: React.FC<{
                 </div>
             </div>
 
-            {/* Price — actual rental variant price for selected duration */}
             <div className="text-right flex-shrink-0">
                 <div className={`text-sm font-black ${isCheapest ? 'text-emerald-700' : 'text-gray-900'}`}>
                     {offer.currency}{offer.rentalPrice}
@@ -280,7 +227,6 @@ const CompanyOfferRow: React.FC<{
                 )}
             </div>
 
-            {/* Radio */}
             <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
                 ${isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
                 {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -289,7 +235,7 @@ const CompanyOfferRow: React.FC<{
     );
 };
 
-//  VehicleRentalCard 
+//  VehicleRentalCard
 
 const VehicleRentalCard: React.FC<{
     group: RentalVehicleGroup;
@@ -314,7 +260,6 @@ const VehicleRentalCard: React.FC<{
         <div className={`bg-white rounded-2xl shadow-lg overflow-hidden border-2 transition-all duration-300
             ${isGroupSelected ? 'border-blue-500 shadow-xl shadow-blue-500/20' : 'border-gray-100 hover:border-blue-300'}`}
         >
-            {/* Image */}
             <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100">
                 <img src={group.image} alt={group.displayName} className="w-full h-full object-cover" />
                 {group.popular && (
@@ -325,7 +270,6 @@ const VehicleRentalCard: React.FC<{
                 <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-gray-800 shadow-lg">
                     {group.vehicleType}
                 </div>
-                {/* Rental price badge */}
                 <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl text-right">
                     <p className="text-white font-black text-base leading-tight">£{lowestRentalPrice}</p>
                     {savings > 0 && (
@@ -334,9 +278,7 @@ const VehicleRentalCard: React.FC<{
                 </div>
             </div>
 
-            {/* Body */}
             <div className="p-4">
-                {/* Name + specs */}
                 <div className="flex items-start justify-between mb-2">
                     <div>
                         <h3 className="text-base font-bold text-gray-900">{group.displayName}</h3>
@@ -354,7 +296,6 @@ const VehicleRentalCard: React.FC<{
                     </span>
                 </div>
 
-                {/* Rating */}
                 <div className="flex items-center gap-2 mb-3">
                     <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full">
                         <Star className="h-3 w-3 fill-blue-500 text-blue-500" />
@@ -363,7 +304,6 @@ const VehicleRentalCard: React.FC<{
                     <span className="text-xs text-gray-500">{group.reviews} reviews</span>
                 </div>
 
-                {/* Company comparison */}
                 <div className="mb-3">
                     <div className="flex items-center justify-between mb-1.5">
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -395,8 +335,7 @@ const VehicleRentalCard: React.FC<{
                     )}
                 </div>
 
-                {/* Driver included */}
-                <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-50 to-amber-50 border border-blue-200 rounded-xl py-1.5 px-3">
+                <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl py-1.5 px-3">
                     <svg className="h-3.5 w-3.5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -407,7 +346,7 @@ const VehicleRentalCard: React.FC<{
     );
 };
 
-//  Main component 
+//  Main component
 
 const CarRentalOptions: React.FC = () => {
     const location = useLocation();
@@ -420,74 +359,42 @@ const CarRentalOptions: React.FC = () => {
 
     const [rentalDetails, setRentalDetails] = useState<RentalDetails>({
         serviceType: 'daily-rental',
-        pickupLocation: 'Dubai',
-        pickupCoords: { lat: 25.2048, lng: 55.2708 },
+        pickupLocation: '',
+        pickupCoords: null,
         date: new Date().toLocaleDateString(),
         time: '10:00 AM',
-        dropoffDate: new Date().toLocaleDateString(),
-        dropoffTime: '06:00 PM',
-        rentalHours: 8,
+        rentalPeriod: '1 Day (10 hrs)',
+        rentalHours: 10,
         rentalDays: 1,
         passengers: 1,
     });
 
-    // Selection keyed on vehicleType (group) + company
     const [selectedVehicleType, setSelectedVehicleType] = useState<string | null>(null);
     const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [sortBy, setSortBy] = useState<'price' | 'rating' | 'passengers'>('price');
 
-    //  helpers 
+    const getRentalTypeDescription = () => rentalDetails.rentalPeriod || '1 Day (10 hrs)';
 
-    const convertTo24Hour = (time12h: string): string => {
-        const [time, modifier] = time12h.split(' ');
-        let [hours, minutes] = time.split(':').map(Number);
-        if (hours === 12) hours = 0;
-        if (modifier === 'PM') hours += 12;
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    };
-
-    const parseDate = (dateString: string): Date => {
-        if (dateString.includes('/')) {
-            const [month, day, year] = dateString.split('/').map(Number);
-            return new Date(year, month - 1, day);
-        }
-        return new Date(dateString);
-    };
-
-    const calculateRentalHours = (pd: Date, pt: string, dd: Date, dt: string) => {
-        const pdt = new Date(pd);
-        const [ph, pm] = pt.split(':').map(Number);
-        pdt.setHours(ph, pm, 0, 0);
-        const ddt = new Date(dd);
-        const [dh, dm] = dt.split(':').map(Number);
-        ddt.setHours(dh, dm, 0, 0);
-        return Math.max(0, (ddt.getTime() - pdt.getTime()) / (1000 * 60 * 60));
-    };
-
-    const getRentalTypeDescription = () => {
-        const h = rentalDetails.rentalHours;
-        if (h <= 5) return 'Half Day Rental';
-        if (h < 24) return 'Full Day Rental';
-        const d = Math.ceil(h / 24);
-        return `${d} Day${d > 1 ? 's' : ''} Rental`;
-    };
-
-    //  effects 
+    //  effects
 
     useEffect(() => { if (!initialized) dispatch(fetchTaxiProducts()); }, [dispatch, initialized]);
     useEffect(() => { if (checkoutUrl) window.location.href = checkoutUrl; }, [checkoutUrl]);
-    useEffect(() => { if (location.state) setRentalDetails(location.state as RentalDetails); }, [location]);
+    useEffect(() => {
+        if (location.state) {
+            setRentalDetails(location.state as RentalDetails);
+        }
+    }, [location]);
     useEffect(() => { if (!selectedVehicleType) setSelectedCompany(null); }, [selectedVehicleType]);
 
-    //  group products by vehicleType 
+    //  group products
 
     const vehicleGroups = useMemo(
         () => groupProductsForRental(allProducts, rentalDetails.rentalHours),
         [allProducts, rentalDetails.rentalHours],
     );
 
-    //  filter & sort 
+    //  filter & sort
 
     const filteredGroups = useMemo(() => {
         return vehicleGroups
@@ -509,12 +416,12 @@ const CarRentalOptions: React.FC = () => {
             });
     }, [vehicleGroups, rentalDetails.passengers, activeFilter, sortBy]);
 
-    //  derived selection 
+    //  derived selection
 
     const selectedGroup = vehicleGroups.find(g => g.vehicleType === selectedVehicleType) ?? null;
     const selectedOffer = selectedGroup?.offers.find(o => o.company === selectedCompany) ?? null;
 
-    //  handlers 
+    //  handlers
 
     const handleSelectOffer = (vehicleType: string, company: string) => {
         if (selectedVehicleType === vehicleType && selectedCompany === company) {
@@ -529,12 +436,6 @@ const CarRentalOptions: React.FC = () => {
     const handleProceedToPay = () => {
         if (!selectedGroup || !selectedOffer) return;
 
-        const pickupTime24 = convertTo24Hour(rentalDetails.time);
-        const dropoffTime24 = convertTo24Hour(rentalDetails.dropoffTime);
-        const pickupDate = parseDate(rentalDetails.date);
-        const dropoffDate = parseDate(rentalDetails.dropoffDate);
-        const calcHours = calculateRentalHours(pickupDate, pickupTime24, dropoffDate, dropoffTime24);
-
         const searchDetails: SearchDetails = {
             serviceType: 'daily-rental',
             from: rentalDetails.pickupLocation,
@@ -542,23 +443,20 @@ const CarRentalOptions: React.FC = () => {
             fromCoords: rentalDetails.pickupCoords || undefined,
             toCoords: rentalDetails.pickupCoords || undefined,
             distance: 0,
-            duration: `${calcHours.toFixed(1)} hours`,
+            duration: `${rentalDetails.rentalHours} hours`,
             date: rentalDetails.date,
             time: rentalDetails.time,
             passengers: rentalDetails.passengers,
             pickupDate: rentalDetails.date,
             pickupTime: rentalDetails.time,
-            dropoffDate: rentalDetails.dropoffDate,
-            dropoffTime: rentalDetails.dropoffTime,
             rentalType: getRentalTypeDescription(),
             numberOfDays: selectedGroup.quantity || 1,
-            rentalHours: calcHours,
+            rentalHours: rentalDetails.rentalHours,
         };
 
         dispatch(createCheckout({
             item: {
                 taxi: {
-                    // Required TaxiOption fields
                     id: parseInt(selectedOffer.shopifyProductId.split('/').pop() ?? '0', 10),
                     shopifyId: selectedOffer.variantId,
                     shopifyProductId: selectedOffer.shopifyProductId,
@@ -587,7 +485,7 @@ const CarRentalOptions: React.FC = () => {
         }));
     };
 
-    //  Loading 
+    //  Loading
 
     if (loading && !initialized) {
         return (
@@ -641,7 +539,7 @@ const CarRentalOptions: React.FC = () => {
         );
     }
 
-    //  Main render 
+    //  Main render
 
     return (
         <>
@@ -663,7 +561,7 @@ const CarRentalOptions: React.FC = () => {
                                         <Calendar className="h-4 w-4 text-blue-700" />
                                     </div>
                                     <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">
-                                        Daily Rental - {getRentalTypeDescription()}
+                                        Daily Rental — {getRentalTypeDescription()}
                                     </h1>
                                 </div>
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-gray-700">
@@ -674,7 +572,7 @@ const CarRentalOptions: React.FC = () => {
                                     <span className="hidden sm:inline text-gray-300">•</span>
                                     <div className="flex items-center gap-1">
                                         <Clock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                                        <span>{rentalDetails.rentalHours.toFixed(1)} hours</span>
+                                        <span>{rentalDetails.rentalHours} hrs driver time</span>
                                     </div>
                                 </div>
                             </div>
@@ -698,10 +596,6 @@ const CarRentalOptions: React.FC = () => {
                             <div className="flex items-center gap-2">
                                 <span className="text-sm bg-blue-50 px-3 py-1 rounded-full font-medium">
                                     {formatDateDisplay(rentalDetails.date)} • {rentalDetails.time}
-                                </span>
-                                <span className="text-sm text-gray-400">→</span>
-                                <span className="text-sm bg-blue-50 px-3 py-1 rounded-full font-medium">
-                                    {formatDateDisplay(rentalDetails.dropoffDate)} • {rentalDetails.dropoffTime}
                                 </span>
                             </div>
                         </div>
@@ -735,17 +629,19 @@ const CarRentalOptions: React.FC = () => {
                             <div>
                                 <h3 className="font-bold text-gray-900 mb-1">{getRentalTypeDescription()}</h3>
                                 <p className="text-sm text-gray-700">
-                                    {rentalDetails.rentalHours <= 5 ? 'Up to 5 hours rental'
-                                        : rentalDetails.rentalHours < 24 ? 'More than 5 hours, less than 24 hours'
-                                            : `${Math.ceil(rentalDetails.rentalHours / 24)} day${Math.ceil(rentalDetails.rentalHours / 24) > 1 ? 's' : ''} (≥24 hours)`}
+                                    {rentalDetails.rentalDays === 0.5
+                                        ? 'Half day — up to 5 driver hours'
+                                        : rentalDetails.rentalDays === 1
+                                            ? 'Full day — up to 10 driver hours'
+                                            : `${rentalDetails.rentalDays} days — up to ${rentalDetails.rentalHours} driver hours`}
                                 </p>
                             </div>
                             <div className="text-right">
-                                <p className="text-xs text-gray-500">Total Duration</p>
-                                <p className="text-lg font-bold text-blue-700">{rentalDetails.rentalHours.toFixed(1)} hours</p>
-                                {rentalDetails.rentalHours >= 24 && (
+                                <p className="text-xs text-gray-500">Driver Hours</p>
+                                <p className="text-lg font-bold text-blue-700">{rentalDetails.rentalHours} hrs</p>
+                                {rentalDetails.rentalDays > 1 && (
                                     <p className="text-xs text-blue-700 font-medium">
-                                        ({Math.ceil(rentalDetails.rentalHours / 24)} days)
+                                        ({rentalDetails.rentalDays} days)
                                     </p>
                                 )}
                             </div>
@@ -847,19 +743,19 @@ const CarRentalOptions: React.FC = () => {
                             {/* Rental details */}
                             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
                                 <div className="flex items-center justify-between mb-3">
-                                    <span className="text-sm font-semibold text-gray-700">Rental Type</span>
+                                    <span className="text-sm font-semibold text-gray-700">Rental Period</span>
                                     <span className="text-sm font-bold text-blue-700">{getRentalTypeDescription()}</span>
                                 </div>
                                 <div className="space-y-2 text-sm">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-gray-700">Duration</span>
-                                        <span className="font-semibold text-gray-900">{rentalDetails.rentalHours.toFixed(1)} hours</span>
+                                        <span className="text-gray-700">Driver Hours</span>
+                                        <span className="font-semibold text-gray-900">{rentalDetails.rentalHours} hrs</span>
                                     </div>
-                                    {rentalDetails.rentalHours >= 24 && (
+                                    {rentalDetails.rentalDays > 1 && (
                                         <div className="flex items-center justify-between">
                                             <span className="text-gray-700">Days</span>
                                             <span className="font-semibold text-gray-900">
-                                                {selectedGroup.quantity || 1} day{(selectedGroup.quantity || 1) > 1 ? 's' : ''}
+                                                {rentalDetails.rentalDays} day{rentalDetails.rentalDays > 1 ? 's' : ''}
                                             </span>
                                         </div>
                                     )}
@@ -867,7 +763,7 @@ const CarRentalOptions: React.FC = () => {
                             </div>
 
                             {/* Schedule */}
-                            <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3">
+                            <div className="bg-gray-50 rounded-xl p-4 mb-4">
                                 <div className="flex items-start gap-3">
                                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 flex-shrink-0">
                                         <div className="w-3 h-3 rounded-full bg-blue-500" />
@@ -876,29 +772,19 @@ const CarRentalOptions: React.FC = () => {
                                         <p className="text-xs font-semibold text-gray-500 uppercase">Pickup</p>
                                         <p className="font-semibold text-gray-900">{formatDateDisplay(rentalDetails.date)}</p>
                                         <p className="text-sm text-gray-700">{rentalDetails.time}</p>
-                                    </div>
-                                </div>
-                                <div className="ml-4 border-l-2 border-dashed border-gray-300 h-4" />
-                                <div className="flex items-start gap-3">
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 flex-shrink-0">
-                                        <div className="w-3 h-3 rounded-full bg-red-500" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs font-semibold text-gray-500 uppercase">Dropoff</p>
-                                        <p className="font-semibold text-gray-900">{formatDateDisplay(rentalDetails.dropoffDate)}</p>
-                                        <p className="text-sm text-gray-700">{rentalDetails.dropoffTime}</p>
+                                        <p className="text-xs text-gray-500 mt-0.5">{rentalDetails.pickupLocation}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Price breakdown */}
+                            {/* Price */}
                             <div className="border-t-2 border-gray-200 pt-4 mb-4">
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-700">{selectedGroup.rentalType}</span>
                                         <span className="font-semibold text-gray-900">{selectedOffer.currency}{selectedOffer.rentalPrice}</span>
                                     </div>
-                                    {rentalDetails.rentalHours >= 24 && selectedGroup.quantity > 1 && (
+                                    {rentalDetails.rentalDays > 1 && selectedGroup.quantity > 1 && (
                                         <div className="flex justify-between text-xs text-gray-500">
                                             <span>Price calculation</span>
                                             <span>{selectedOffer.currency}{Math.round(selectedOffer.rentalPrice / selectedGroup.quantity)} × {selectedGroup.quantity} days</span>
@@ -913,7 +799,6 @@ const CarRentalOptions: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Book Now */}
                             <button onClick={handleProceedToPay} disabled={checkoutLoading}
                                 className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white font-bold py-4 px-6 rounded-xl hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                                 {checkoutLoading

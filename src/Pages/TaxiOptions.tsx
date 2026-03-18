@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Navigation, Lock, RefreshCw, AlertCircle, Plane,
-    Users, Briefcase, Star, TrendingDown, BadgeCheck, Clock,
-    Zap, CheckCircle2, Shield, ChevronDown, ChevronUp,
+    Users, Briefcase, Star, Clock
+    , CheckCircle2, Shield, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import type { SearchDetails } from '../types';
 import { useMobile } from '../hooks/useMobile';
@@ -13,15 +13,16 @@ import Filters from '../Components/TaxiOptions/Filters';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
 // import { createCheckout } from '../store/slices/cartSlice';
-import { formatDateDisplay } from '../utils/common';
+import { companyColor, formatDateDisplay, TagPill } from '../utils/common';
 import SEOHead from '../Components/SEOHead';
 import { isAirportLocation } from '../services/shopifyCartService';
+import { createCheckout } from '../store/slices/cartSlice';
 
-//  Types 
+//  Types
 
 interface CompanyOffer {
     company: string;
-    baseFare: number;   // metafield base_fare — used for display & tag assignment
+    baseFare: number;   // metafield base_fare — used only for Best Price tag assignment, never displayed
     price: number;      // distance-band variant price — used for checkout
     currency: string;
     rating: number;
@@ -65,8 +66,8 @@ function parseTitleParts(title: string): { vehicleLabel: string; company: string
 }
 
 function parsePrice(price: any): number {
-    if (typeof price === 'object' && price !== null) return parseFloat(price.amount ?? '0');
-    return parseFloat(String(price ?? '0'));
+    if (typeof price === 'object' && price !== null) return parseFloat(parseFloat(price.amount ?? '0').toFixed(2));
+    return parseFloat(parseFloat(String(price ?? '0')).toFixed(2));
 }
 
 /**
@@ -77,8 +78,11 @@ function parsePrice(price: any): number {
 function getVariantForDistance(variants: any[], distanceMiles: number): any | null {
     if (!variants?.length) return null;
 
-    for (const v of variants) {
-        const match = v.title?.match(/^(\d+)-(\d+)\s*miles?$/i);
+    const distanceBands = variants.filter(v => /^\d+-\d+\s*miles?$/i.test(v.title ?? ''));
+
+    // Exact match
+    for (const v of distanceBands) {
+        const match = v.title.match(/^(\d+)-(\d+)\s*miles?$/i);
         if (match) {
             const min = parseInt(match[1], 10);
             const max = parseInt(match[2], 10);
@@ -86,29 +90,25 @@ function getVariantForDistance(variants: any[], distanceMiles: number): any | nu
         }
     }
 
-    // Fallback: highest distance band
-    const distanceBands = variants.filter(v => /^\d+-\d+\s*miles?$/i.test(v.title ?? ''));
-    return distanceBands[distanceBands.length - 1] ?? null;
+    // Nearest band fallback (instead of always picking the highest)
+    let closest: any = null;
+    let closestDiff = Infinity;
+    for (const v of distanceBands) {
+        const match = v.title.match(/^(\d+)-(\d+)\s*miles?$/i);
+        if (match) {
+            const min = parseInt(match[1], 10);
+            const max = parseInt(match[2], 10);
+            const mid = (min + max) / 2;
+            const diff = Math.abs(distanceMiles - mid);
+            if (diff < closestDiff) {
+                closestDiff = diff;
+                closest = v;
+            }
+        }
+    }
+    return closest;
 }
 
-/**
- * Group raw Shopify products by `vehicle_type` metafield.
- * Each product = one company's offering for that vehicle type.
- *
- * shopifySlice should map metafields onto each product object:
- *   product.vehicleType  ← metafield "vehicle_type"
- *   product.passengers   ← metafield "passengers"
- *   product.luggage      ← metafield "luggage"
- *   product.popular      ← metafield (boolean)
- *   product.rating       ← metafield "rating"
- *   product.reviews      ← metafield "reviews"
- *   product.eta          ← metafield "estimated_arrival"
- *   product.baseFare     ← metafield "base_fare"
- *   product.perKmRate    ← metafield "per_km_rate"
- *   product.image        ← first product image URL
- *   product.variants     ← variant array with id, title, price
- *   product.shopifyId    ← product GID
- */
 function groupProductsByVehicleType(
     products: any[],
     distanceMiles: number,
@@ -183,67 +183,29 @@ function groupProductsByVehicleType(
     return Array.from(map.values()).sort((a, b) => a.passengers - b.passengers);
 }
 
-//  Company colour palette 
-
-const COMPANY_COLORS: Record<string, string> = {
-    TransferEase: '#f97316',
-    RideXpress: '#3b82f6',
-    LuxiCab: '#8b5cf6',
-    CityLink: '#10b981',
-};
-
-function companyColor(name: string): string {
-    if (COMPANY_COLORS[name]) return COMPANY_COLORS[name];
-    const key = Object.keys(COMPANY_COLORS).find(k =>
-        name.toLowerCase().includes(k.toLowerCase()),
-    );
-    return key ? COMPANY_COLORS[key] : '#6b7280';
-}
-
-//  Tag components 
-
-const TAG_STYLES: Record<string, string> = {
-    'Best Price': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'Top Rated': 'bg-amber-50 text-amber-700 border-amber-200',
-    'Fastest': 'bg-sky-50 text-sky-700 border-sky-200',
-};
-const TAG_ICONS: Record<string, React.ReactNode> = {
-    'Best Price': <TrendingDown className="h-3 w-3" />,
-    'Top Rated': <BadgeCheck className="h-3 w-3" />,
-    'Fastest': <Zap className="h-3 w-3" />,
-};
-
-const TagPill: React.FC<{ tag?: string; isCheapest?: boolean }> = ({ tag, isCheapest }) => {
-    const resolved = tag ?? (isCheapest ? 'Best Price' : undefined);
-    if (!resolved || !TAG_STYLES[resolved]) return null;
-    return (
-        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TAG_STYLES[resolved]}`}>
-            {TAG_ICONS[resolved]} {resolved}
-        </span>
-    );
-};
-
 //  CompanyOfferRow 
 
 const CompanyOfferRow: React.FC<{
     offer: CompanyOffer;
-    lowestBaseFare: number;
+    lowestPrice: number;        // lowest distance-band variant price in this group
     isSelected: boolean;
     onSelect: () => void;
     tripType?: 'one-way' | 'return';
-}> = ({ offer, lowestBaseFare, isSelected, onSelect, tripType }) => {
+}> = ({ offer, lowestPrice, isSelected, onSelect, tripType }) => {
     const isReturn = tripType === 'return';
-    // All prices shown to the user are return-trip aware
-    const displayFare = isReturn ? offer.baseFare * 2 : offer.baseFare;
-    const displayLowest = isReturn ? lowestBaseFare * 2 : lowestBaseFare;
-    const isCheapest = offer.baseFare === lowestBaseFare;
+    const displayPrice = isReturn ? offer.price * 2 : offer.price;
+    const displayLowest = isReturn ? lowestPrice * 2 : lowestPrice;
+    const isCheapest = offer.price === lowestPrice;
     const color = companyColor(offer.company);
-    const diff = displayFare - displayLowest;
+    const diff = parseFloat((displayPrice - displayLowest).toFixed(2));
+
+    // Format: no decimals if whole number, else 2dp
+    const fmt = (n: number) => Number.isInteger(n) ? `${n}` : n.toFixed(0); //possible bug, check in future
 
     return (
         <div
             onClick={onSelect}
-            className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all duration-200 border-2
+            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl cursor-pointer transition-all duration-200 border-2
                 ${isSelected
                     ? 'border-blue-600 bg-blue-50 shadow-sm'
                     : isCheapest
@@ -276,11 +238,11 @@ const CompanyOfferRow: React.FC<{
 
             <div className="text-right flex-shrink-0">
                 <div className="text-[9px] text-gray-400 leading-none mb-0.5">{isReturn ? 'return' : 'from'}</div>
-                <div className={`text-base font-black ${isCheapest ? 'text-emerald-700' : 'text-gray-900'}`}>
-                    {offer.currency}{displayFare}
+                <div className="text-xl sm:text-2xl font-black text-gray-900 leading-none">
+                    £{fmt(displayPrice)}
                 </div>
                 {diff > 0 && (
-                    <div className="text-[10px] text-red-500 font-semibold">+{offer.currency}{diff}</div>
+                    <div className="text-[10px] text-red-500 font-semibold">+{offer.currency}{fmt(diff)}</div>
                 )}
             </div>
 
@@ -304,14 +266,14 @@ const TaxiCard: React.FC<{
     const [expanded, setExpanded] = useState(false);
 
     const sortedOffers = useMemo(
-        () => [...taxi.offers].sort((a, b) => a.baseFare - b.baseFare),
+        () => [...taxi.offers].sort((a, b) => a.price - b.price),
         [taxi.offers],
     );
-    const lowestBaseFare = sortedOffers[0]?.baseFare ?? 0;
-    const highestBaseFare = sortedOffers[sortedOffers.length - 1]?.baseFare ?? 0;
+    const lowestPrice = sortedOffers[0]?.price ?? 0;
+    const highestPrice = sortedOffers[sortedOffers.length - 1]?.price ?? 0;
     const isReturn = tripType === 'return';
-    const savings = (highestBaseFare - lowestBaseFare) * (isReturn ? 2 : 1);
-    const displayPrice = isReturn ? lowestBaseFare * 2 : lowestBaseFare;
+    const savings = (highestPrice - lowestPrice) * (isReturn ? 2 : 1);
+    const displayPrice = isReturn ? lowestPrice * 2 : lowestPrice;
 
     const isGroupSelected = selectedVehicleType === taxi.vehicleType;
     const visibleOffers = expanded ? sortedOffers : sortedOffers.slice(0, 2);
@@ -320,125 +282,96 @@ const TaxiCard: React.FC<{
         <div className={`group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border-2
             ${isGroupSelected ? 'border-blue-600 shadow-blue-100' : 'border-gray-100 hover:border-blue-200'}`}>
 
-            <div className="flex flex-col sm:flex-row">
+            {/* ── Vehicle banner: thumbnail left + title/price right ── */}
+            <div className="flex items-stretch border-b border-gray-100">
 
-                {/* LEFT: Vehicle image */}
-                <div className="relative sm:w-48 md:w-56 sm:flex-shrink-0 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-
-                    {/* Mobile image */}
-                    <div className="sm:hidden w-full" style={{ paddingBottom: '52%', position: 'relative' }}>
-                        <img
-                            src={taxi.image}
-                            alt={taxi.displayName}
-                            className="absolute inset-0 w-full h-full object-cover"
-                            style={{ objectPosition: 'center 30%' }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                        {taxi.popular && (
-                            <div className="absolute top-3 left-3 bg-blue-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow">
-                                Popular
-                            </div>
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 px-3 py-2.5">
-                            <h3 className="text-white font-black text-sm leading-tight">{taxi.displayName}</h3>
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="flex items-center gap-1 text-white/80 text-[10px] font-semibold">
-                                    <Users className="h-3 w-3" />{taxi.passengers} pax
-                                </span>
-                                <span className="flex items-center gap-1 text-white/80 text-[10px] font-semibold">
-                                    <Briefcase className="h-3 w-3" />{taxi.luggage} bags
-                                </span>
-                            </div>
+                {/* Fixed square thumbnail — never crops weirdly */}
+                <div className="relative w-36 sm:w-48 flex-shrink-0 overflow-hidden bg-gray-200">
+                    <img
+                        src={taxi.image}
+                        alt={taxi.displayName}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/20" />
+                    {taxi.popular && (
+                        <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-0.5 rounded-full text-[9px] font-bold shadow">
+                            Popular
                         </div>
-                    </div>
-
-                    {/* Desktop image */}
-                    <div className="hidden sm:block absolute inset-0">
-                        <img
-                            src={taxi.image}
-                            alt={taxi.displayName}
-                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
-                        {taxi.popular && (
-                            <div className="absolute top-3 left-3 bg-blue-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow">
-                                Popular
-                            </div>
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 px-3 py-3">
-                            <h3 className="text-white font-black text-sm leading-tight">{taxi.displayName}</h3>
-                            <p className="text-white/60 text-[10px] mt-0.5">{taxi.vehicleType}</p>
-                            <div className="flex items-center gap-2 mt-1.5">
-                                <span className="flex items-center gap-1 text-white/80 text-[10px] font-semibold">
-                                    <Users className="h-3 w-3" />{taxi.passengers} pax
-                                </span>
-                                <span className="flex items-center gap-1 text-white/80 text-[10px] font-semibold">
-                                    <Briefcase className="h-3 w-3" />{taxi.luggage} bags
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="hidden sm:block" style={{ paddingBottom: '130%' }} />
+                    )}
                 </div>
 
-                {/* RIGHT: Company comparison — all real Shopify prices */}
-                <div className="flex-1 min-w-0 p-3 flex flex-col gap-2">
-
-                    {/* Header */}
-                    <div className="flex items-center justify-between flex-wrap gap-1">
-                        <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-                            {taxi.offers.length} {taxi.offers.length === 1 ? 'Company' : 'Companies'}
-                        </span>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                            {tripType === 'return' && (
-                                <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                                    ×2 return
-                                </span>
-                            )}
-                            <span className="text-[10px] text-gray-600 font-medium">
-                                From <span className="text-base font-black text-gray-900">£{displayPrice}</span>
+                {/* Vehicle info + price summary */}
+                <div className="flex-1 flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-gray-50 to-white">
+                    <div>
+                        <h3 className="text-sm sm:text-base font-black text-gray-900 leading-tight">{taxi.displayName}</h3>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{taxi.vehicleType}</p>
+                        <div className="flex items-center gap-3 mt-1.5">
+                            <span className="flex items-center gap-1 text-gray-500 text-[10px] font-semibold">
+                                <Users className="h-3 w-3 text-blue-500" />{taxi.passengers} pax
                             </span>
-                            {savings > 0 && (
-                                <span className="text-[10px] text-emerald-600 font-semibold">· save £{savings}</span>
-                            )}
+                            <span className="flex items-center gap-1 text-gray-500 text-[10px] font-semibold">
+                                <Briefcase className="h-3 w-3 text-blue-500" />{taxi.luggage} bags
+                            </span>
                         </div>
                     </div>
-
-                    {/* Offer rows */}
-                    <div className="space-y-1.5 flex-1">
-                        {visibleOffers.map(offer => (
-                            <CompanyOfferRow
-                                key={`${offer.shopifyProductId}-${offer.company}`}
-                                offer={offer}
-                                lowestBaseFare={lowestBaseFare}
-                                isSelected={isGroupSelected && selectedCompany === offer.company}
-                                onSelect={() => onSelectOffer(taxi.vehicleType, offer.company)}
-                                tripType={tripType}
-                            />
-                        ))}
+                    <div className="text-right flex-shrink-0">
+                        <div className="text-[9px] text-gray-400 uppercase tracking-wide">
+                            {isReturn ? 'return from' : 'from'}
+                        </div>
+                        <div className="text-xl sm:text-2xl font-black text-gray-900 leading-none">
+                            £{displayPrice.toFixed(0)}
+                        </div>
+                        {savings > 0 && (
+                            <div className="text-[10px] text-emerald-600 font-bold mt-0.5">save £{savings}</div>
+                        )}
+                        {tripType === 'return' && (
+                            <div className="text-[9px] text-blue-500 font-semibold mt-0.5">×2 return</div>
+                        )}
                     </div>
+                </div>
+            </div>
 
-                    {/* Expand / collapse when >2 offers */}
-                    {sortedOffers.length > 2 && (
-                        <button
-                            onClick={() => setExpanded(!expanded)}
-                            className="flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold text-gray-400 hover:text-blue-600 transition-colors rounded-xl hover:bg-blue-50"
-                        >
-                            {expanded
-                                ? <><ChevronUp className="h-3.5 w-3.5" />Show less</>
-                                : <><ChevronDown className="h-3.5 w-3.5" />Show {sortedOffers.length - 2} more</>
-                            }
-                        </button>
-                    )}
+            {/*  Company list  */}
+            <div className="p-3 flex flex-col gap-2">
 
-                    {/* Driver included */}
-                    <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg py-1.5 px-2.5 mt-auto">
-                        <svg className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <span className="text-[10px] font-bold text-blue-700">Professional Driver Included</span>
-                    </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        {taxi.offers.length} {taxi.offers.length === 1 ? 'Company' : 'Companies'}
+                    </span>
+                    <div className="flex-1 h-px bg-gray-100" />
+                </div>
+
+                <div className="space-y-1.5">
+                    {visibleOffers.map(offer => (
+                        <CompanyOfferRow
+                            key={`${offer.shopifyProductId}-${offer.company}`}
+                            offer={offer}
+                            lowestPrice={lowestPrice}
+                            isSelected={isGroupSelected && selectedCompany === offer.company}
+                            onSelect={() => onSelectOffer(taxi.vehicleType, offer.company)}
+                            tripType={tripType}
+                        />
+                    ))}
+                </div>
+
+                {sortedOffers.length > 2 && (
+                    <button
+                        onClick={() => setExpanded(!expanded)}
+                        className="flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold text-gray-400 hover:text-blue-600 transition-colors rounded-xl hover:bg-blue-50"
+                    >
+                        {expanded
+                            ? <><ChevronUp className="h-3.5 w-3.5" />Show less</>
+                            : <><ChevronDown className="h-3.5 w-3.5" />Show {sortedOffers.length - 2} more</>
+                        }
+                    </button>
+                )}
+
+                <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg py-1.5 px-2.5">
+                    <svg className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-[10px] font-bold text-blue-700">Professional Driver Included</span>
                 </div>
             </div>
         </div>
@@ -512,13 +445,13 @@ const TaxiOptions: React.FC = () => {
         }
     }, [selectedVehicleType]);
 
-    //  Group products by vehicle_type 
+    // ── Group products by vehicle_type ───────────────────────────────────────
     const vehicleGroups = useMemo(
         () => groupProductsByVehicleType(rawProducts, distance),
         [rawProducts, distance],
     );
 
-    //  Filter & sort 
+    // ── Filter & sort ────────────────────────────────────────────────────────
     const filteredVehicles = useMemo(() => {
         return vehicleGroups
             .filter(v => v.passengers >= requiredPassengers)
@@ -538,14 +471,14 @@ const TaxiOptions: React.FC = () => {
             });
     }, [vehicleGroups, requiredPassengers, activeFilter, sortBy]);
 
-    //  Derived selection 
+    // ── Derived selection ────────────────────────────────────────────────────
     const selectedGroup = vehicleGroups.find(v => v.vehicleType === selectedVehicleType) ?? null;
     const selectedOffer = selectedGroup?.offers.find(o => o.company === selectedCompany) ?? null;
     const displayPrice = selectedOffer
-        ? (searchDetails.tripType === 'return' ? selectedOffer.baseFare * 2 : selectedOffer.baseFare)
+        ? (searchDetails.tripType === 'return' ? selectedOffer.price * 2 : selectedOffer.price)
         : null;
 
-    //  Handlers 
+    // ── Handlers ─────────────────────────────────────────────────────────────
     const handleSelectOffer = (vehicleType: string, company: string) => {
         if (selectedVehicleType === vehicleType && selectedCompany === company) {
             // Deselect on second click
@@ -556,7 +489,6 @@ const TaxiOptions: React.FC = () => {
             setSelectedCompany(company);
         }
     };
-
     const handleProceedToPay = () => {
         if (isAirportTrip) {
             if (!parkingAcknowledged) { alert('Please acknowledge parking fees.'); return; }
@@ -564,17 +496,38 @@ const TaxiOptions: React.FC = () => {
         }
         if (!selectedGroup || !selectedOffer) return;
 
-        console.log('Proceed to pay:', {
-            vehicle: selectedGroup.displayName,
-            vehicleType: selectedGroup.vehicleType,
-            company: selectedOffer.company,
-            variantId: selectedOffer.variantId,
-            price: displayPrice,
-            currency: selectedOffer.currency,
-        });
-
-        // Uncomment when ready:
-        // dispatch(createCheckout({ ... }));
+        dispatch(createCheckout({
+            item: {
+                taxi: {
+                    id: parseInt(selectedOffer.shopifyProductId.split('/').pop() ?? '0', 10),
+                    shopifyId: selectedOffer.variantId,
+                    shopifyProductId: selectedOffer.shopifyProductId,
+                    name: selectedGroup.displayName,
+                    type: selectedGroup.vehicleType,
+                    vehicleType: selectedGroup.vehicleType,
+                    displayName: selectedGroup.displayName,
+                    companyName: selectedOffer.company,
+                    image: selectedGroup.image,
+                    passengers: selectedGroup.passengers,
+                    luggage: selectedGroup.luggage,
+                    popular: selectedGroup.popular,
+                    rating: selectedOffer.rating,
+                    reviews: selectedOffer.reviews,
+                    baseFare: selectedOffer.baseFare,
+                    perKmRate: selectedGroup.perKmRate,
+                    estimatedArrival: selectedOffer.eta,
+                    eta: selectedOffer.eta,
+                    features: [],
+                    variants: [],
+                } satisfies import('../types').TaxiOption,
+                search: {
+                    ...searchDetails,
+                    flightNumber: isAirportTrip ? flightNumber.trim() : undefined,
+                },
+                totalPrice: displayPrice ?? selectedOffer.price,
+                quantity: searchDetails.tripType === 'return' ? 2 : 1,
+            }
+        }));
     };
 
     const isProceedDisabled = () => {
@@ -583,7 +536,7 @@ const TaxiOptions: React.FC = () => {
         return false;
     };
 
-    //  Render: Loading 
+    // ── Render: Loading ───────────────────────────────────────────────────────
     if (loading && !initialized) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -596,7 +549,7 @@ const TaxiOptions: React.FC = () => {
         );
     }
 
-    //  Render: Error 
+    // ── Render: Error ─────────────────────────────────────────────────────────
     if (error && !loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
@@ -906,11 +859,11 @@ const TaxiOptions: React.FC = () => {
                                                             <>
                                                                 <div className="flex justify-between">
                                                                     <span className="text-gray-600">Outbound</span>
-                                                                    <span className="font-semibold text-gray-900">{selectedOffer.currency}{selectedOffer.baseFare}</span>
+                                                                    <span className="font-semibold text-gray-900">{selectedOffer.currency}{selectedOffer.price}</span>
                                                                 </div>
                                                                 <div className="flex justify-between">
                                                                     <span className="text-gray-600">Return</span>
-                                                                    <span className="font-semibold text-gray-900">{selectedOffer.currency}{selectedOffer.baseFare}</span>
+                                                                    <span className="font-semibold text-gray-900">{selectedOffer.currency}{selectedOffer.price}</span>
                                                                 </div>
                                                                 <div className="flex justify-between pt-2 border-t border-gray-200">
                                                                     <span className="font-bold text-gray-900">Total</span>

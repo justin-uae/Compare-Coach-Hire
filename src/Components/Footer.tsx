@@ -1,7 +1,7 @@
 import React from 'react';
 import { Mail, MapPin, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
-// import Logo from '../assets/Logo.png'
+import Logo from '../assets/Logo.png'
 
 const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
@@ -9,7 +9,7 @@ const Footer: React.FC = () => {
     const quickLinks = [
         { name: 'Post a Job', href: '/' },
         { name: 'Vehicles', href: '/vehicles' },
-        { name: 'Ask an Expert', href: '/askanexpert' },
+        // { name: 'Ask an Expert', href: '/askanexpert' },
         { name: 'About Us', href: '/about' },
         { name: 'Contact Us', href: '/contact' },
     ];
@@ -41,12 +41,12 @@ const Footer: React.FC = () => {
                     <div className="flex flex-col items-center md:items-start gap-4 w-full md:w-auto">
                         {/* Logo/Brand */}
                         <Link to="/" className="flex items-center gap-3 group">
-                            {/* <img
+                            <img
                                 src={Logo}
                                 loading='lazy'
                                 alt="Coach Hire Compare Logo"
                                 className="h-16 sm:h-16 md:h-16 w-auto transition-transform duration-300 group-hover:scale-105"
-                            /> */}
+                            />
                             <h1 className="text-lg sm:text-xl font-bold text-white">
                                 Coach Hire<span className="text-blue-600"> Compare</span>
                             </h1>

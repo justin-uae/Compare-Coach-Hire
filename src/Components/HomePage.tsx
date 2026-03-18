@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft, Locate, Car, History, User, Mail, Phone, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft, Locate, Car, History, User, Mail, Phone, ChevronRight, ChevronLeft, ChevronUp } from 'lucide-react';
 import Banner5 from '../assets/Banner3.png';
-import { calculateRentalDays, calculateRentalHours, countryDialCodes, formatDate, formatDateWithOrdinal, formatTime12Hour, generateCalendar, generateTimeSlots, isDateWithin12Hours, isPastDate, isTimeAtLeast12HoursFromNow, updateSelectedTimeToValid } from '../utils/common';
+import { companies, countryDialCodes, formatDate, formatDateWithOrdinal, formatTime12Hour, generateCalendar, generateTimeSlots, isDateWithin12Hours, isPastDate, isTimeAtLeast12HoursFromNow, updateSelectedTimeToValid } from '../utils/common';
 
 declare global {
     interface Window {
@@ -19,9 +19,29 @@ interface PlaceDetails {
 
 type TripType = 'one-way' | 'return';
 type ServiceType = 'transfers' | 'daily-rental';
+type RentalPeriod = 'half-day' | number; // 'half-day' = 5hrs, number = full days (10hrs each)
+
+const HALF_DAY_HOURS = 5;
+const FULL_DAY_HOURS = 10;
+
+const getRentalHoursFromPeriod = (period: RentalPeriod): number => {
+    if (period === 'half-day') return HALF_DAY_HOURS;
+    return (period as number) * FULL_DAY_HOURS;
+};
+
+const getRentalPeriodLabel = (period: RentalPeriod): string => {
+    if (period === 'half-day') return 'Half Day (5 hrs)';
+    const days = period as number;
+    return days === 1 ? '1 Day (10 hrs)' : `${days} Days (${days * FULL_DAY_HOURS} hrs)`;
+};
 
 const HomePage: React.FC = () => {
     const navigate = useNavigate();
+
+    const [showAll, setShowAll] = useState(false);
+
+    const visible = showAll ? companies : companies.slice(0, 4);
+    const remaining = companies.length - 4;
 
     // Form Step State
     const [currentStep, setCurrentStep] = useState(1);
@@ -89,21 +109,7 @@ const HomePage: React.FC = () => {
     });
 
     // Daily Rental specific States
-    const [dropoffDate, setDropoffDate] = useState<Date>(() => {
-        const now = new Date();
-        now.setDate(now.getDate() + 1); // Set to tomorrow by default
-        now.setHours(now.getHours() + 12);
-        return now;
-    });
-    const [dropoffTime, setDropoffTime] = useState(() => {
-        const now = new Date();
-        now.setHours(now.getHours() + 12);
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = '00';
-        return `${hours}:${minutes}`;
-    });
-    const [showDropoffDatePicker, setShowDropoffDatePicker] = useState(false);
-    const [currentDropoffMonth, setCurrentDropoffMonth] = useState(new Date());
+    const [rentalPeriod, setRentalPeriod] = useState<RentalPeriod>(1);
 
     // Refs for Google Places Autocomplete
     const pickupInputRef = useRef<HTMLInputElement>(null);
@@ -214,14 +220,13 @@ const HomePage: React.FC = () => {
                 const data = await response.json();
 
                 if (data.country_code) {
-                    // Map country codes to dial codes
                     const countryToDialCode: { [key: string]: string } = {
                         'GB': '+44', 'US': '+1', 'CA': '+1', 'IN': '+91', 'AU': '+61',
                         'AE': '+971', 'DE': '+49', 'FR': '+33', 'JP': '+81', 'CN': '+86',
                         'RU': '+7', 'ES': '+34', 'IT': '+39', 'NL': '+31', 'CH': '+41',
                         'SE': '+46', 'NO': '+47', 'DK': '+45', 'BE': '+32', 'IE': '+353',
                         'NZ': '+64', 'MX': '+52', 'BR': '+55', 'AR': '+54', 'PK': '+92',
-                        'ID': '+62', 'PH': '+63', 'MY': '+90', 'SG': '+65', 'TH': '+66',
+                        'ID': '+62', 'PH': '+63', 'MY': '+60', 'SG': '+65', 'TH': '+66',
                         'KR': '+82', 'TR': '+90', 'ZA': '+27', 'EG': '+20', 'NG': '+234',
                         'KE': '+254', 'SA': '+966', 'IL': '+972', 'PL': '+48', 'UA': '+380',
                         'GR': '+30', 'PT': '+351', 'AT': '+43', 'HU': '+36', 'CZ': '+420',
@@ -243,7 +248,7 @@ const HomePage: React.FC = () => {
                         'MR': '+222', 'NE': '+227', 'TD': '+235', 'CF': '+236', 'CM': '+237',
                         'GQ': '+240', 'GA': '+241', 'CG': '+242', 'CD': '+243', 'AO': '+244',
                         'NA': '+264', 'MG': '+261',
-                        'RE': '+262', 'YT': '+262', 'SH': '+290', 'FK': '+700', 'GI': '+350',
+                        'RE': '+262', 'YT': '+262', 'SH': '+290', 'FK': '+500', 'GI': '+350',
                         'AD': '+376', 'MC': '+377', 'SM': '+378', 'VA': '+379',
                         'LI': '+423', 'FO': '+298', 'GL': '+299', 'AX': '+358', 'JE': '+44',
                         'GG': '+44', 'IM': '+44'
@@ -256,7 +261,6 @@ const HomePage: React.FC = () => {
                 }
             } catch (error) {
                 console.log('Could not auto-detect location, using default +44');
-                // Keep default +44 if detection fails
             }
         };
 
@@ -288,7 +292,6 @@ const HomePage: React.FC = () => {
                 return;
             }
 
-            // Clear existing autocomplete instances when switching service types
             if (pickupAutocompleteRef.current && pickupInputRef.current) {
                 window.google.maps.event.clearInstanceListeners(pickupInputRef.current);
                 pickupAutocompleteRef.current = null;
@@ -299,7 +302,6 @@ const HomePage: React.FC = () => {
                 dropoffAutocompleteRef.current = null;
             }
 
-            // Initialize pickup autocomplete (always needed)
             if (pickupInputRef.current) {
                 pickupAutocompleteRef.current = new window.google.maps.places.Autocomplete(
                     pickupInputRef.current,
@@ -322,7 +324,6 @@ const HomePage: React.FC = () => {
                 });
             }
 
-            // Initialize dropoff autocomplete (only for transfers)
             if (serviceType === 'transfers' && dropoffInputRef.current) {
                 dropoffAutocompleteRef.current = new window.google.maps.places.Autocomplete(
                     dropoffInputRef.current,
@@ -390,27 +391,13 @@ const HomePage: React.FC = () => {
         );
     };
 
-    // Handle date change with 12-hour validation
     const handleDateClick = (date: Date) => {
-        // Update the date
         setSelectedDate(date);
 
-        // Update time to ensure it's valid
         const updated = updateSelectedTimeToValid(date, selectedTime);
         setSelectedDate(updated.date);
         setSelectedTime(updated.time);
 
-        // If it's daily rental, also update dropoff date if it's before the new pickup date
-        if (serviceType === 'daily-rental') {
-            if (dropoffDate < updated.date) {
-                setDropoffDate(new Date(updated.date));
-                const dropoffUpdated = updateSelectedTimeToValid(updated.date, dropoffTime);
-                setDropoffDate(dropoffUpdated.date);
-                setDropoffTime(dropoffUpdated.time);
-            }
-        }
-
-        // If it's transfers with return trip, update return date if it's before the new departure date
         if (serviceType === 'transfers' && tripType === 'return') {
             if (returnDate < updated.date) {
                 const tomorrow = new Date(updated.date);
@@ -433,14 +420,6 @@ const HomePage: React.FC = () => {
         setShowReturnDatePicker(false);
     };
 
-    const handleDropoffDateClick = (date: Date) => {
-        setDropoffDate(date);
-        const updated = updateSelectedTimeToValid(date, dropoffTime);
-        setDropoffDate(updated.date);
-        setDropoffTime(updated.time);
-        setShowDropoffDatePicker(false);
-    };
-
     const handlePickupTimeChange = (time: string) => {
         if (!isTimeAtLeast12HoursFromNow(selectedDate, time)) {
             alert('Please select a time at least 12 hours from now');
@@ -457,14 +436,6 @@ const HomePage: React.FC = () => {
         setReturnTime(time);
     };
 
-    const handleDropoffTimeChange = (time: string) => {
-        if (!isTimeAtLeast12HoursFromNow(dropoffDate, time)) {
-            alert('Please select a time at least 12 hours from now');
-            return;
-        }
-        setDropoffTime(time);
-    };
-
     const handlePhoneInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setContactPhone(value);
@@ -472,7 +443,6 @@ const HomePage: React.FC = () => {
 
     const handleDialCodeSelect = (code: string) => {
         setSelectedDialCode(code);
-        // If the current phone starts with the previous dial code, replace it
         if (contactPhone.startsWith(selectedDialCode)) {
             setContactPhone(code + contactPhone.slice(selectedDialCode.length));
         } else {
@@ -483,6 +453,8 @@ const HomePage: React.FC = () => {
 
     const sendEnquiryEmail = async () => {
         setIsSendingEmail(true);
+
+        const rentalHours = serviceType === 'daily-rental' ? getRentalHoursFromPeriod(rentalPeriod) : null;
 
         const enquiryData = {
             name: contactName,
@@ -497,11 +469,10 @@ const HomePage: React.FC = () => {
             tripType: serviceType === 'transfers' ? tripType : null,
             distance: distance,
             duration: duration,
-            dropoffDate: serviceType === 'daily-rental' ? formatDate(dropoffDate) : null,
-            dropoffTime: serviceType === 'daily-rental' ? formatTime12Hour(dropoffTime) : null,
+            rentalPeriod: serviceType === 'daily-rental' ? getRentalPeriodLabel(rentalPeriod) : null,
+            rentalHours: rentalHours,
             returnDate: (serviceType === 'transfers' && tripType === 'return') ? formatDate(returnDate) : null,
             returnTime: (serviceType === 'transfers' && tripType === 'return') ? formatTime12Hour(returnTime) : null,
-            rentalHours: serviceType === 'daily-rental' ? currentRentalHours : null
         };
 
         try {
@@ -576,14 +547,8 @@ const HomePage: React.FC = () => {
                 return;
             }
 
-            const rentalHours = calculateRentalHours(selectedDate, selectedTime, dropoffDate, dropoffTime);
-
-            if (rentalHours <= 0) {
-                alert('Dropoff date and time must be after pickup date and time');
-                return;
-            }
-
-            const rentalDays = calculateRentalDays(selectedDate, dropoffDate);
+            const rentalHours = getRentalHoursFromPeriod(rentalPeriod);
+            const rentalDays = rentalPeriod === 'half-day' ? 0.5 : rentalPeriod as number;
 
             navigate('/car-rental-options', {
                 state: {
@@ -592,8 +557,7 @@ const HomePage: React.FC = () => {
                     pickupCoords: pickupDetails ? { lat: pickupDetails.lat, lng: pickupDetails.lng } : null,
                     date: formatDate(selectedDate),
                     time: formatTime12Hour(selectedTime),
-                    dropoffDate: formatDate(dropoffDate),
-                    dropoffTime: formatTime12Hour(dropoffTime),
+                    rentalPeriod: getRentalPeriodLabel(rentalPeriod),
                     rentalHours: rentalHours,
                     rentalDays: rentalDays,
                     passengers: numberOfPersons,
@@ -605,14 +569,12 @@ const HomePage: React.FC = () => {
         }
     };
 
-    const isDateSelected = (date: Date, type: 'departure' | 'return' | 'dropoff') => {
+    const isDateSelected = (date: Date, type: 'departure' | 'return') => {
         if (!date) return false;
         if (type === 'departure') {
             return date.toDateString() === selectedDate.toDateString();
-        } else if (type === 'return') {
-            return date.toDateString() === returnDate.toDateString();
         } else {
-            return date.toDateString() === dropoffDate.toDateString();
+            return date.toDateString() === returnDate.toDateString();
         }
     };
 
@@ -631,18 +593,16 @@ const HomePage: React.FC = () => {
 
     const departureCalendarDays = generateCalendar(currentMonth);
     const returnCalendarDays = generateCalendar(currentReturnMonth);
-    const dropoffCalendarDays = generateCalendar(currentDropoffMonth);
     const monthNames = ["January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"];
 
-    // Calculate estimated rental info for daily rental
-    const currentRentalHours = serviceType === 'daily-rental'
-        ? calculateRentalHours(selectedDate, selectedTime, dropoffDate, dropoffTime)
-        : 0;
+    const currentRentalHours = serviceType === 'daily-rental' ? getRentalHoursFromPeriod(rentalPeriod) : 0;
 
     const pickupTimeSlots = generateTimeSlots(selectedDate);
     const returnTimeSlots = generateTimeSlots(returnDate);
-    const dropoffTimeSlots = generateTimeSlots(dropoffDate);
+
+    // Rental period options
+    const rentalPeriodOptions: RentalPeriod[] = ['half-day', 1, 2, 3, 4, 5, 6, 7];
 
     // Step validation functions
     const canProceedToStep2 = () => {
@@ -694,8 +654,8 @@ const HomePage: React.FC = () => {
                                                 setCurrentStep(1);
                                             }}
                                             className={`py-3 px-3 sm:px-4 rounded-xl border-2 font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${serviceType === 'transfers'
-                                                ? 'bg-gradient-to-r from-blue-700 to-blue-800 border-blue-700 text-white shadow-lg'
-                                                : 'bg-white border-gray-200 text-gray-800 hover:border-blue-400'
+                                                ? 'bg-gradient-to-r from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg'
+                                                : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300'
                                                 }`}
                                         >
                                             <Car className="h-4 w-4 flex-shrink-0" />
@@ -708,8 +668,8 @@ const HomePage: React.FC = () => {
                                                 setCurrentStep(1);
                                             }}
                                             className={`py-3 px-3 sm:px-4 rounded-xl border-2 font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${serviceType === 'daily-rental'
-                                                ? 'bg-gradient-to-r from-blue-700 to-blue-800 border-blue-700 text-white shadow-lg'
-                                                : 'bg-white border-gray-200 text-gray-800 hover:border-blue-400'
+                                                ? 'bg-gradient-to-r from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg'
+                                                : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300'
                                                 }`}
                                         >
                                             <History className="h-4 w-4 flex-shrink-0" />
@@ -717,10 +677,10 @@ const HomePage: React.FC = () => {
                                         </button>
                                     </div>
 
-                                    <h2 className="text-lg sm:text-xl font-bold text-blue-800 mb-2">
-                                        {serviceType === 'transfers' ? 'Reserve Your Transport Now' : 'Reserve a Car for the Day'}
+                                    <h2 className="text-lg sm:text-xl font-bold text-blue-600 mb-2">
+                                        {serviceType === 'transfers' ? 'Reserve Your Transport Now' : 'Reserve a Vehicle for the Day'}
                                     </h2>
-                                    <p className="text-sm sm:text-base text-gray-800">
+                                    <p className="text-sm sm:text-base text-gray-600">
                                         {serviceType === 'transfers'
                                             ? 'Experience luxury travel with professional drivers'
                                             : 'Choose from our premium fleet with driver included'
@@ -734,18 +694,18 @@ const HomePage: React.FC = () => {
                                         {[1, 2, 3].map((step) => (
                                             <React.Fragment key={step}>
                                                 <div className="flex flex-col items-center flex-1">
-                                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-400 ${currentStep >= step
-                                                        ? 'bg-gradient-to-r from-blue-700 to-blue-800 text-white shadow-lg'
-                                                        : 'bg-gray-200 text-gray-700'
+                                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${currentStep >= step
+                                                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
+                                                        : 'bg-gray-200 text-gray-500'
                                                         }`}>
                                                         {step}
                                                     </div>
-                                                    <span className={`text-xs whitespace-nowrap mt-1 font-medium ${currentStep >= step ? 'text-blue-800' : 'text-gray-800'}`}>
+                                                    <span className={`text-xs whitespace-nowrap mt-1 font-medium ${currentStep >= step ? 'text-blue-600' : 'text-gray-400'}`}>
                                                         {step === 1 ? 'Location' : step === 2 ? 'Date & Time' : 'Contact'}
                                                     </span>
                                                 </div>
                                                 {step < 3 && (
-                                                    <div className={`h-1 flex-1 mx-2 rounded transition-all duration-400 ${currentStep > step ? 'bg-blue-700' : 'bg-gray-200'}`} />
+                                                    <div className={`h-1 flex-1 mx-2 rounded transition-all duration-300 ${currentStep > step ? 'bg-blue-500' : 'bg-gray-200'}`} />
                                                 )}
                                             </React.Fragment>
                                         ))}
@@ -762,8 +722,8 @@ const HomePage: React.FC = () => {
                                                     <div className="group">
                                                         <div className="flex items-center justify-between mb-2">
                                                             <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-indigo-700/20 to-indigo-800/20 rounded-lg border border-indigo-200">
-                                                                    <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-800" />
+                                                                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 rounded-lg border border-indigo-200">
+                                                                    <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
                                                                 </div>
                                                                 Trip Type
                                                             </label>
@@ -773,8 +733,8 @@ const HomePage: React.FC = () => {
                                                                 type="button"
                                                                 onClick={() => handleTripTypeChange('one-way')}
                                                                 className={`py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl border-2 font-medium text-sm transition-all duration-200 ${tripType === 'one-way'
-                                                                    ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-700 text-indigo-700 shadow-sm'
-                                                                    : 'bg-white border-gray-200 text-gray-800 hover:border-gray-400'
+                                                                    ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-500 text-indigo-700 shadow-sm'
+                                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
                                                                     }`}
                                                             >
                                                                 One Way
@@ -783,8 +743,8 @@ const HomePage: React.FC = () => {
                                                                 type="button"
                                                                 onClick={() => handleTripTypeChange('return')}
                                                                 className={`py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl border-2 font-medium text-sm transition-all duration-200 ${tripType === 'return'
-                                                                    ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-700 text-indigo-700 shadow-sm'
-                                                                    : 'bg-white border-gray-200 text-gray-800 hover:border-gray-400'
+                                                                    ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-500 text-indigo-700 shadow-sm'
+                                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
                                                                     }`}
                                                             >
                                                                 Return
@@ -796,8 +756,8 @@ const HomePage: React.FC = () => {
                                                     <div className="group">
                                                         <div className="flex items-center justify-between mb-2">
                                                             <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-700/20 to-blue-800/20 rounded-lg border border-blue-200">
-                                                                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-blue-800" />
+                                                                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
+                                                                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                                                                 </div>
                                                                 Pickup Location
                                                             </label>
@@ -811,9 +771,9 @@ const HomePage: React.FC = () => {
                                                                     value={pickupLocation}
                                                                     onChange={(e) => setPickupLocation(e.target.value)}
                                                                     required
-                                                                    className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-10 sm:pr-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-700 focus:ring-4 focus:ring-blue-700/20 text-sm sm:text-base text-gray-700 placeholder-gray-800 transition-all duration-200"
+                                                                    className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-10 sm:pr-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm sm:text-base text-gray-700 placeholder-gray-400 transition-all duration-200"
                                                                 />
-                                                                <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-800 group-hover:text-blue-700 transition-colors duration-200" />
+                                                                <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" />
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => getCurrentLocation('pickup')}
@@ -822,9 +782,9 @@ const HomePage: React.FC = () => {
                                                                     title="Use current location"
                                                                 >
                                                                     {isGettingCurrentLocation.pickup ? (
-                                                                        <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-blue-800"></div>
+                                                                        <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-blue-600"></div>
                                                                     ) : (
-                                                                        <Locate className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-700 hover:text-blue-700" />
+                                                                        <Locate className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 hover:text-blue-500" />
                                                                     )}
                                                                 </button>
                                                             </div>
@@ -835,8 +795,8 @@ const HomePage: React.FC = () => {
                                                     <div className="group">
                                                         <div className="flex items-center justify-between mb-2">
                                                             <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-700/20 to-blue-800/20 rounded-lg border border-blue-200">
-                                                                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-blue-800" />
+                                                                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
+                                                                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                                                                 </div>
                                                                 Destination
                                                             </label>
@@ -850,9 +810,9 @@ const HomePage: React.FC = () => {
                                                                     value={dropoffLocation}
                                                                     onChange={(e) => setDropoffLocation(e.target.value)}
                                                                     required
-                                                                    className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-10 sm:pr-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-700 focus:ring-4 focus:ring-blue-700/20 text-sm sm:text-base text-gray-700 placeholder-gray-800 transition-all duration-200"
+                                                                    className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-10 sm:pr-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm sm:text-base text-gray-700 placeholder-gray-400 transition-all duration-200"
                                                                 />
-                                                                <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-800 group-hover:text-blue-700 transition-colors duration-200" />
+                                                                <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" />
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => getCurrentLocation('dropoff')}
@@ -861,31 +821,31 @@ const HomePage: React.FC = () => {
                                                                     title="Use current location"
                                                                 >
                                                                     {isGettingCurrentLocation.dropoff ? (
-                                                                        <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-blue-800"></div>
+                                                                        <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-blue-600"></div>
                                                                     ) : (
-                                                                        <Locate className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-700 hover:text-blue-700" />
+                                                                        <Locate className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 hover:text-blue-500" />
                                                                     )}
                                                                 </button>
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* Distance Display - Changed to Miles */}
+                                                    {/* Distance Display */}
                                                     {distance !== null && (
                                                         <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border-2 border-green-200 animate-fadeIn">
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-2 sm:gap-3">
                                                                     <div className="p-1.5 sm:p-2 bg-white rounded-lg shadow-sm">
-                                                                        <Navigation className="h-4 w-4 sm:h-5 sm:w-5 text-green-800" />
+                                                                        <Navigation className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                                                                     </div>
                                                                     <div>
-                                                                        <p className="text-[10px] sm:text-xs text-green-800 font-semibold uppercase tracking-wide">Route Distance</p>
+                                                                        <p className="text-[10px] sm:text-xs text-green-600 font-semibold uppercase tracking-wide">Route Distance</p>
                                                                         <p className="text-lg sm:text-2xl font-bold text-gray-900">{distance.toFixed(1)} miles</p>
                                                                     </div>
                                                                 </div>
                                                                 {duration && (
                                                                     <div className="text-right">
-                                                                        <p className="text-[10px] sm:text-xs text-green-800 font-semibold uppercase tracking-wide">Est. Time</p>
+                                                                        <p className="text-[10px] sm:text-xs text-green-600 font-semibold uppercase tracking-wide">Est. Time</p>
                                                                         <p className="text-base sm:text-lg font-bold text-gray-900">{duration}</p>
                                                                     </div>
                                                                 )}
@@ -896,8 +856,8 @@ const HomePage: React.FC = () => {
                                                     {isCalculating && (
                                                         <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border-2 border-gray-200">
                                                             <div className="flex items-center gap-2 sm:gap-3">
-                                                                <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-blue-800"></div>
-                                                                <p className="text-xs sm:text-sm text-gray-800 font-medium">Calculating distance...</p>
+                                                                <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-blue-600"></div>
+                                                                <p className="text-xs sm:text-sm text-gray-600 font-medium">Calculating distance...</p>
                                                             </div>
                                                         </div>
                                                     )}
@@ -909,8 +869,8 @@ const HomePage: React.FC = () => {
                                                 <div className="group">
                                                     <div className="flex items-center justify-between mb-2">
                                                         <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                            <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-700/20 to-blue-800/20 rounded-lg border border-blue-200">
-                                                                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-blue-800" />
+                                                            <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
+                                                                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                                                             </div>
                                                             Pickup Location
                                                         </label>
@@ -924,9 +884,9 @@ const HomePage: React.FC = () => {
                                                                 value={pickupLocation}
                                                                 onChange={(e) => setPickupLocation(e.target.value)}
                                                                 required
-                                                                className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-10 sm:pr-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-700 focus:ring-4 focus:ring-blue-700/20 text-sm sm:text-base text-gray-700 placeholder-gray-800 transition-all duration-200"
+                                                                className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-10 sm:pr-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm sm:text-base text-gray-700 placeholder-gray-400 transition-all duration-200"
                                                             />
-                                                            <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-800 group-hover:text-blue-700 transition-colors duration-200" />
+                                                            <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" />
                                                             <button
                                                                 type="button"
                                                                 onClick={() => getCurrentLocation('pickup')}
@@ -935,9 +895,9 @@ const HomePage: React.FC = () => {
                                                                 title="Use current location"
                                                             >
                                                                 {isGettingCurrentLocation.pickup ? (
-                                                                    <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-blue-800"></div>
+                                                                    <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-blue-600"></div>
                                                                 ) : (
-                                                                    <Locate className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-700 hover:text-blue-700" />
+                                                                    <Locate className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 hover:text-blue-500" />
                                                                 )}
                                                             </button>
                                                         </div>
@@ -949,28 +909,28 @@ const HomePage: React.FC = () => {
 
                                     {/* STEP 2: Date & Time + Passengers */}
                                     {currentStep === 2 && (
-                                        <div className="space-y-3 sm:space-y-4 animate-fadeIn max-h-[500px] pr-2">
+                                        <div className="space-y-3 sm:space-y-4 animate-fadeIn">
                                             {/* Pickup Date and Time Row */}
                                             <div className="grid grid-cols-2 gap-2 sm:gap-4">
                                                 {/* Pickup Date Selection */}
                                                 <div className="group relative">
                                                     <div className="flex items-center justify-between mb-2">
                                                         <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                            <div className="p-1 sm:p-1.5 bg-gradient-to-br from-purple-700/20 to-purple-800/20 rounded-lg border border-purple-200">
-                                                                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-purple-800" />
+                                                            <div className="p-1 sm:p-1.5 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-lg border border-purple-200">
+                                                                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
                                                             </div>
                                                             <span className="hidden sm:inline">Pickup Date</span>
                                                             <span className="sm:hidden">Pickup</span>
                                                         </label>
                                                         {isDateWithin12Hours(selectedDate) && (
-                                                            <span className="text-xs text-red-800 font-medium">*12h</span>
+                                                            <span className="text-xs text-red-600 font-medium">*12h</span>
                                                         )}
                                                     </div>
                                                     <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                                         <button
                                                             type="button"
                                                             onClick={() => setShowDatePicker(!showDatePicker)}
-                                                            className="relative w-full h-[46px] sm:h-auto py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-purple-700 focus:outline-none focus:border-purple-700 focus:ring-4 focus:ring-purple-700/20 transition-all duration-200 cursor-pointer text-left flex items-center"
+                                                            className="relative w-full h-[46px] sm:h-auto py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left flex items-center"
                                                         >
                                                             <div className="text-gray-700 font-medium text-xs sm:text-sm">
                                                                 {formatDateWithOrdinal(selectedDate)}
@@ -983,7 +943,7 @@ const HomePage: React.FC = () => {
                                                         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-6 z-50 animate-slideDown min-w-[280px] sm:min-w-[300px]">
                                                             <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
                                                                 <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                                                    <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                                                                     </svg>
                                                                 </button>
@@ -991,14 +951,14 @@ const HomePage: React.FC = () => {
                                                                     <h3 className="text-lg font-bold text-gray-900">{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</h3>
                                                                 </div>
                                                                 <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                                                    <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                                                     </svg>
                                                                 </button>
                                                             </div>
                                                             <div className="grid grid-cols-7 gap-2 mb-2">
                                                                 {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                                                                    <div key={day} className="text-center text-xs font-semibold text-gray-700 py-2">{day}</div>
+                                                                    <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">{day}</div>
                                                                 ))}
                                                             </div>
                                                             <div className="grid grid-cols-7 gap-2">
@@ -1010,7 +970,7 @@ const HomePage: React.FC = () => {
                                                                     const isSelected = isDateSelected(date, 'departure');
                                                                     return (
                                                                         <button key={index} type="button" onClick={() => !isPast && !isWithin12Hours && handleDateClick(date)} disabled={isPast || isWithin12Hours}
-                                                                            className={`aspect-square rounded-lg text-sm font-medium transition-all duration-200 ${isPast || isWithin12Hours ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-purple-50 cursor-pointer'} ${isSelected ? 'bg-gradient-to-br from-purple-700 to-purple-800 text-white shadow-lg scale-105' : 'text-gray-700'} ${isToday && !isSelected ? 'border-2 border-purple-700' : ''}`}
+                                                                            className={`aspect-square rounded-lg text-sm font-medium transition-all duration-200 ${isPast || isWithin12Hours ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-purple-50 cursor-pointer'} ${isSelected ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105' : 'text-gray-700'} ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}`}
                                                                             title={isWithin12Hours ? 'Must be at least 12 hours from now' : ''}>
                                                                             {date.getDate()}
                                                                         </button>
@@ -1018,8 +978,8 @@ const HomePage: React.FC = () => {
                                                                 })}
                                                             </div>
                                                             <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-                                                                <button type="button" onClick={() => { const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); handleDateClick(tomorrow); }} className="text-sm text-purple-800 hover:text-purple-700 font-semibold">Tomorrow</button>
-                                                                <button type="button" onClick={() => setShowDatePicker(false)} className="px-4 py-2 bg-purple-800 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold">Done</button>
+                                                                <button type="button" onClick={() => { const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); handleDateClick(tomorrow); }} className="text-sm text-purple-600 hover:text-purple-700 font-semibold">Tomorrow</button>
+                                                                <button type="button" onClick={() => setShowDatePicker(false)} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold">Done</button>
                                                             </div>
                                                         </div>
                                                     )}
@@ -1029,150 +989,88 @@ const HomePage: React.FC = () => {
                                                 <div className="group">
                                                     <div className="flex items-center justify-between mb-2">
                                                         <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                            <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-700/20 to-blue-800/20 rounded-lg border border-blue-200">
-                                                                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-800" />
+                                                            <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
+                                                                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                                                             </div>
                                                             <span className="hidden sm:inline">Pickup Time</span>
                                                             <span className="sm:hidden">Time</span>
                                                         </label>
                                                     </div>
                                                     <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                        <select value={selectedTime} onChange={(e) => handlePickupTimeChange(e.target.value)} className="relative w-full h-[46px] sm:h-auto py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-700 focus:ring-4 focus:ring-blue-700/20 text-gray-700 text-xs sm:text-sm transition-all duration-200 appearance-none cursor-pointer font-medium">
+                                                        <select value={selectedTime} onChange={(e) => handlePickupTimeChange(e.target.value)} className="relative w-full h-[46px] sm:h-auto py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 text-xs sm:text-sm transition-all duration-200 appearance-none cursor-pointer font-medium">
                                                             {pickupTimeSlots.length > 0 ? pickupTimeSlots.map((time) => (<option key={time} value={time}>{formatTime12Hour(time)}</option>)) : (<option value="">No available times</option>)}
                                                         </select>
                                                         <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                                             </svg>
                                                         </div>
                                                     </div>
                                                     {pickupTimeSlots.length === 0 && (
-                                                        <p className="text-xs text-red-800 mt-1">No available times for today. Please select a future date.</p>
+                                                        <p className="text-xs text-red-600 mt-1">No available times for today. Please select a future date.</p>
                                                     )}
                                                 </div>
                                             </div>
 
-                                            {/* Daily Rental: Dropoff Date/Time */}
+                                            {/* Daily Rental: Rental Period Selector */}
                                             {serviceType === 'daily-rental' && (
                                                 <>
-                                                    <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                                                        {/* Dropoff Date */}
-                                                        <div className="group relative">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                                    <div className="p-1 sm:p-1.5 bg-gradient-to-br from-green-700/20 to-green-800/20 rounded-lg border border-green-200">
-                                                                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-green-800" />
-                                                                    </div>
-                                                                    <span className="hidden sm:inline">Dropoff Date</span>
-                                                                    <span className="sm:hidden">Dropoff</span>
-                                                                </label>
-                                                                {isDateWithin12Hours(dropoffDate) && (
-                                                                    <span className="text-xs text-red-800 font-medium">*12h</span>
-                                                                )}
-                                                            </div>
-                                                            <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setShowDropoffDatePicker(!showDropoffDatePicker)}
-                                                                    className="relative w-full py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-700 focus:outline-none focus:border-green-700 focus:ring-4 focus:ring-green-700/20 transition-all duration-200 cursor-pointer text-left"
-                                                                >
-                                                                    <div className="text-gray-700 font-medium text-xs sm:text-sm">
-                                                                        {formatDateWithOrdinal(dropoffDate)}
-                                                                    </div>
-                                                                </button>
-                                                            </div>
+                                                    {/* Driving hours info banner */}
+                                                    <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex items-start gap-2">
+                                                        <svg className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        <p className="text-xs text-blue-700 leading-relaxed">
+                                                            <span className="font-semibold">Driver hours:</span> Half Day = 5 hrs &nbsp;|&nbsp; Full Day = 10 hrs. Due to legal driving regulations, a maximum of 10 hours per day applies.
+                                                        </p>
+                                                    </div>
 
-                                                            {/* Dropoff Date Picker Dropdown */}
-                                                            {showDropoffDatePicker && (
-                                                                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-6 z-50 animate-slideDown min-w-[280px] sm:min-w-[300px]">
-                                                                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-                                                                        <button type="button" onClick={() => setCurrentDropoffMonth(new Date(currentDropoffMonth.getFullYear(), currentDropoffMonth.getMonth() - 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                                                            <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                                            </svg>
-                                                                        </button>
-                                                                        <div className="text-center">
-                                                                            <h3 className="text-lg font-bold text-gray-900">{monthNames[currentDropoffMonth.getMonth()]} {currentDropoffMonth.getFullYear()}</h3>
-                                                                        </div>
-                                                                        <button type="button" onClick={() => setCurrentDropoffMonth(new Date(currentDropoffMonth.getFullYear(), currentDropoffMonth.getMonth() + 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                                                            <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                                            </svg>
-                                                                        </button>
-                                                                    </div>
-                                                                    <div className="grid grid-cols-7 gap-2 mb-2">
-                                                                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                                                                            <div key={day} className="text-center text-xs font-semibold text-gray-700 py-2">{day}</div>
-                                                                        ))}
-                                                                    </div>
-                                                                    <div className="grid grid-cols-7 gap-2">
-                                                                        {dropoffCalendarDays.map((date, index) => {
-                                                                            if (!date) return <div key={`empty-${index}`} className="aspect-square" />;
-                                                                            const isToday = date.toDateString() === new Date().toDateString();
-                                                                            const isPast = isPastDate(date);
-                                                                            const isWithin12Hours = isDateWithin12Hours(date);
-                                                                            const isBefore = isBeforeDeparture(date);
-                                                                            const isSelected = isDateSelected(date, 'dropoff');
-                                                                            return (
-                                                                                <button key={index} type="button" onClick={() => !isPast && !isWithin12Hours && !isBefore && handleDropoffDateClick(date)} disabled={isPast || isWithin12Hours || isBefore}
-                                                                                    className={`aspect-square rounded-lg text-sm font-medium transition-all duration-200 ${isPast || isWithin12Hours || isBefore ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-green-50 cursor-pointer'} ${isSelected ? 'bg-gradient-to-br from-green-700 to-green-800 text-white shadow-lg scale-105' : 'text-gray-700'} ${isToday && !isSelected ? 'border-2 border-green-700' : ''}`}
-                                                                                    title={isWithin12Hours ? 'Must be at least 12 hours from now' : isBefore ? 'Must be after pickup date' : ''}>
-                                                                                    {date.getDate()}
-                                                                                </button>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                    <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-                                                                        <button type="button" onClick={() => { const nextDay = new Date(selectedDate); nextDay.setDate(nextDay.getDate() + 1); handleDropoffDateClick(nextDay); }} className="text-sm text-green-800 hover:text-green-700 font-semibold">Next Day</button>
-                                                                        <button type="button" onClick={() => setShowDropoffDatePicker(false)} className="px-4 py-2 bg-green-800 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold">Done</button>
-                                                                    </div>
+                                                    {/* Rental Period Selection */}
+                                                    <div className="group">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
+                                                                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
+                                                                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                                                                 </div>
-                                                            )}
+                                                                Rental Period
+                                                            </label>
                                                         </div>
-
-                                                        {/* Dropoff Time Selection */}
-                                                        <div className="group">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                                    <div className="p-1 sm:p-1.5 bg-gradient-to-br from-green-700/20 to-green-800/20 rounded-lg border border-green-200">
-                                                                        <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-green-800" />
-                                                                    </div>
-                                                                    <span className="hidden sm:inline">Dropoff Time</span>
-                                                                    <span className="sm:hidden">Time</span>
-                                                                </label>
-                                                            </div>
-                                                            <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                                <select value={dropoffTime} onChange={(e) => handleDropoffTimeChange(e.target.value)} className="relative w-full py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-green-700 focus:ring-4 focus:ring-green-700/20 text-gray-700 text-xs sm:text-sm transition-all duration-200 appearance-none cursor-pointer font-medium">
-                                                                    {dropoffTimeSlots.length > 0 ? dropoffTimeSlots.map((time) => (<option key={time} value={time}>{formatTime12Hour(time)}</option>)) : (<option value="">No available times</option>)}
-                                                                </select>
-                                                                <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                                                    </svg>
-                                                                </div>
-                                                            </div>
-                                                            {dropoffTimeSlots.length === 0 && (
-                                                                <p className="text-xs text-red-800 mt-1">No available times for today. Please select a future date.</p>
-                                                            )}
+                                                        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                                                            {rentalPeriodOptions.map((period) => {
+                                                                const isSelected = rentalPeriod === period;
+                                                                const label = period === 'half-day' ? 'Half Day' : period === 1 ? '1 Day' : `${period} Days`;
+                                                                const hours = period === 'half-day' ? '5 hrs' : `${(period as number) * 10} hrs`;
+                                                                return (
+                                                                    <button
+                                                                        key={String(period)}
+                                                                        type="button"
+                                                                        onClick={() => setRentalPeriod(period)}
+                                                                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border-2 font-medium text-center transition-all duration-200 ${isSelected
+                                                                            ? 'bg-gradient-to-b from-blue-500 to-blue-600 border-blue-500 text-white shadow-md'
+                                                                            : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50'
+                                                                            }`}
+                                                                    >
+                                                                        <span className="text-xs sm:text-sm font-bold leading-tight">{label}</span>
+                                                                        <span className={`text-[10px] mt-0.5 font-medium ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>{hours}</span>
+                                                                    </button>
+                                                                );
+                                                            })}
                                                         </div>
                                                     </div>
 
-                                                    {currentRentalHours > 0 && (
-                                                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-3 sm:p-4">
-                                                            <div className="flex items-center justify-between">
-                                                                <div>
-                                                                    <p className="text-xs text-blue-800 font-semibold uppercase tracking-wide mb-1">Rental Duration</p>
-                                                                    <p className="text-lg sm:text-xl font-bold text-gray-900">{currentRentalHours.toFixed(1)} hours</p>
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <p className="text-xs text-blue-800 font-semibold uppercase tracking-wide mb-1">Type</p>
-                                                                    <p className="text-sm font-bold text-blue-700">
-                                                                        {currentRentalHours <= 5 ? 'Half Day' : currentRentalHours < 24 ? 'Full Day' : `${Math.ceil(currentRentalHours / 24)} Days`}
-                                                                    </p>
-                                                                </div>
+                                                    {/* Rental Summary */}
+                                                    <div className="bg-gradient-to-r from-blue-50 to-amber-50 border-2 border-blue-200 rounded-xl p-3 sm:p-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mb-0.5">Selected Period</p>
+                                                                <p className="text-base sm:text-lg font-bold text-gray-900">{getRentalPeriodLabel(rentalPeriod)}</p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mb-0.5">Driver Hours</p>
+                                                                <p className="text-lg sm:text-xl font-bold text-blue-700">{currentRentalHours} hrs</p>
                                                             </div>
                                                         </div>
-                                                    )}
+                                                    </div>
                                                 </>
                                             )}
 
@@ -1183,20 +1081,20 @@ const HomePage: React.FC = () => {
                                                     <div className="group relative">
                                                         <div className="flex items-center justify-between mb-2">
                                                             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                                                                <div className="p-1.5 bg-gradient-to-br from-purple-700/20 to-purple-800/20 rounded-lg border border-purple-200">
-                                                                    <Calendar className="h-4 w-4 text-purple-800" />
+                                                                <div className="p-1.5 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-lg border border-purple-200">
+                                                                    <Calendar className="h-4 w-4 text-purple-600" />
                                                                 </div>
                                                                 Return Date
                                                             </label>
                                                             {isDateWithin12Hours(returnDate) && (
-                                                                <span className="text-xs text-red-800 font-medium">*12h</span>
+                                                                <span className="text-xs text-red-600 font-medium">*12h</span>
                                                             )}
                                                         </div>
                                                         <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setShowReturnDatePicker(!showReturnDatePicker)}
-                                                                className="relative w-full h-[46px] sm:h-auto py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-purple-700 focus:outline-none focus:border-purple-700 focus:ring-4 focus:ring-purple-700/20 transition-all duration-200 cursor-pointer text-left flex items-center"
+                                                                className="relative w-full h-[46px] sm:h-auto py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left flex items-center"
                                                             >
                                                                 <div className="text-gray-700 font-medium text-xs sm:text-sm">
                                                                     {formatDateWithOrdinal(returnDate)}
@@ -1209,7 +1107,7 @@ const HomePage: React.FC = () => {
                                                             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50 animate-slideDown min-w-[300px]">
                                                                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
                                                                     <button type="button" onClick={() => setCurrentReturnMonth(new Date(currentReturnMonth.getFullYear(), currentReturnMonth.getMonth() - 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                                                        <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                                                                         </svg>
                                                                     </button>
@@ -1217,14 +1115,14 @@ const HomePage: React.FC = () => {
                                                                         <h3 className="text-lg font-bold text-gray-900">{monthNames[currentReturnMonth.getMonth()]} {currentReturnMonth.getFullYear()}</h3>
                                                                     </div>
                                                                     <button type="button" onClick={() => setCurrentReturnMonth(new Date(currentReturnMonth.getFullYear(), currentReturnMonth.getMonth() + 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                                                        <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                                                         </svg>
                                                                     </button>
                                                                 </div>
                                                                 <div className="grid grid-cols-7 gap-2 mb-2">
                                                                     {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                                                                        <div key={day} className="text-center text-xs font-semibold text-gray-700 py-2">{day}</div>
+                                                                        <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">{day}</div>
                                                                     ))}
                                                                 </div>
                                                                 <div className="grid grid-cols-7 gap-2">
@@ -1237,7 +1135,7 @@ const HomePage: React.FC = () => {
                                                                         const isSelected = isDateSelected(date, 'return');
                                                                         return (
                                                                             <button key={index} type="button" onClick={() => !isPast && !isWithin12Hours && !isBefore && handleReturnDateClick(date)} disabled={isPast || isWithin12Hours || isBefore}
-                                                                                className={`aspect-square rounded-lg text-sm font-medium transition-all duration-200 ${isPast || isWithin12Hours || isBefore ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-purple-50 cursor-pointer'} ${isSelected ? 'bg-gradient-to-br from-purple-700 to-purple-800 text-white shadow-lg scale-105' : 'text-gray-700'} ${isToday && !isSelected ? 'border-2 border-purple-700' : ''}`}
+                                                                                className={`aspect-square rounded-lg text-sm font-medium transition-all duration-200 ${isPast || isWithin12Hours || isBefore ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-purple-50 cursor-pointer'} ${isSelected ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105' : 'text-gray-700'} ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}`}
                                                                                 title={isWithin12Hours ? 'Must be at least 12 hours from now' : isBefore ? 'Must be after departure date' : ''}>
                                                                                 {date.getDate()}
                                                                             </button>
@@ -1245,8 +1143,8 @@ const HomePage: React.FC = () => {
                                                                     })}
                                                                 </div>
                                                                 <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-                                                                    <button type="button" onClick={() => { const nextDay = new Date(selectedDate); nextDay.setDate(nextDay.getDate() + 1); handleReturnDateClick(nextDay); }} className="text-sm text-purple-800 hover:text-purple-700 font-semibold">Next Day</button>
-                                                                    <button type="button" onClick={() => setShowReturnDatePicker(false)} className="px-4 py-2 bg-purple-800 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold">Done</button>
+                                                                    <button type="button" onClick={() => { const nextDay = new Date(selectedDate); nextDay.setDate(nextDay.getDate() + 1); handleReturnDateClick(nextDay); }} className="text-sm text-purple-600 hover:text-purple-700 font-semibold">Next Day</button>
+                                                                    <button type="button" onClick={() => setShowReturnDatePicker(false)} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold">Done</button>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1256,24 +1154,24 @@ const HomePage: React.FC = () => {
                                                     <div className="group">
                                                         <div className="flex items-center justify-between mb-2">
                                                             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                                                                <div className="p-1.5 bg-gradient-to-br from-blue-700/20 to-blue-800/20 rounded-lg border border-blue-200">
-                                                                    <Clock className="h-4 w-4 text-blue-800" />
+                                                                <div className="p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
+                                                                    <Clock className="h-4 w-4 text-blue-600" />
                                                                 </div>
                                                                 Return Time
                                                             </label>
                                                         </div>
                                                         <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                            <select value={returnTime} onChange={(e) => handleReturnTimeChange(e.target.value)} className="relative w-full h-[46px] sm:h-auto py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-700 focus:ring-4 focus:ring-blue-700/20 text-gray-700 text-xs sm:text-sm transition-all duration-200 appearance-none cursor-pointer font-medium">
+                                                            <select value={returnTime} onChange={(e) => handleReturnTimeChange(e.target.value)} className="relative w-full h-[46px] sm:h-auto py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 text-xs sm:text-sm transition-all duration-200 appearance-none cursor-pointer font-medium">
                                                                 {returnTimeSlots.length > 0 ? returnTimeSlots.map((time) => (<option key={time} value={time}>{formatTime12Hour(time)}</option>)) : (<option value="">No available times</option>)}
                                                             </select>
                                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                                <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                                                 </svg>
                                                             </div>
                                                         </div>
                                                         {returnTimeSlots.length === 0 && (
-                                                            <p className="text-xs text-red-800 mt-1">No available times for today. Please select a future date.</p>
+                                                            <p className="text-xs text-red-600 mt-1">No available times for today. Please select a future date.</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1283,20 +1181,20 @@ const HomePage: React.FC = () => {
                                             <div className="group">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-green-700/20 to-green-800/20 rounded-lg border border-green-200">
-                                                            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-green-800" />
+                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-lg border border-green-200">
+                                                            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                                                         </div>
                                                         <span className="hidden sm:inline">Number of Passengers</span>
                                                         <span className="sm:hidden">Passengers</span>
                                                     </label>
                                                 </div>
                                                 <div className="flex items-center gap-2 sm:gap-3">
-                                                    <button type="button" onClick={() => setNumberOfPersons(Math.max(1, numberOfPersons - 1))} className="w-10 h-10 sm:w-12 sm:h-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-700 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-lg sm:text-xl text-gray-700 hover:text-green-800">−</button>
+                                                    <button type="button" onClick={() => setNumberOfPersons(Math.max(1, numberOfPersons - 1))} className="w-10 h-10 sm:w-12 sm:h-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-lg sm:text-xl text-gray-700 hover:text-green-600">−</button>
                                                     <div className="flex-1 text-center">
                                                         <div className="text-2xl sm:text-3xl font-bold text-gray-900">{numberOfPersons}</div>
-                                                        <div className="text-[10px] sm:text-xs text-gray-700 mt-0.5 sm:mt-1">{numberOfPersons === 1 ? 'Passenger' : 'Passengers'}</div>
+                                                        <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">{numberOfPersons === 1 ? 'Passenger' : 'Passengers'}</div>
                                                     </div>
-                                                    <button type="button" onClick={() => setNumberOfPersons(Math.min(50, numberOfPersons + 1))} className="w-10 h-10 sm:w-12 sm:h-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-700 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-lg sm:text-xl text-gray-700 hover:text-green-800">+</button>
+                                                    <button type="button" onClick={() => setNumberOfPersons(Math.min(50, numberOfPersons + 1))} className="w-10 h-10 sm:w-12 sm:h-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-lg sm:text-xl text-gray-700 hover:text-green-600">+</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -1309,15 +1207,15 @@ const HomePage: React.FC = () => {
                                             <div className="group">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-indigo-700/20 to-indigo-800/20 rounded-lg border border-indigo-200">
-                                                            <User className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-800" />
+                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 rounded-lg border border-indigo-200">
+                                                            <User className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
                                                         </div>
                                                         Full Name
                                                     </label>
                                                 </div>
                                                 <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                    <input type="text" placeholder="Enter your full name" value={contactName} onChange={(e) => setContactName(e.target.value)} required className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-indigo-700 focus:ring-4 focus:ring-indigo-700/20 text-sm sm:text-base text-gray-700 placeholder-gray-800 transition-all duration-200" />
-                                                    <User className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-800 group-hover:text-indigo-700 transition-colors duration-200" />
+                                                    <input type="text" placeholder="Enter your full name" value={contactName} onChange={(e) => setContactName(e.target.value)} required className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 text-sm sm:text-base text-gray-700 placeholder-gray-400 transition-all duration-200" />
+                                                    <User className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-indigo-500 transition-colors duration-200" />
                                                 </div>
                                             </div>
 
@@ -1325,15 +1223,15 @@ const HomePage: React.FC = () => {
                                             <div className="group">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-700/20 to-blue-800/20 rounded-lg border border-blue-200">
-                                                            <Mail className="h-3 w-3 sm:h-4 sm:w-4 text-blue-800" />
+                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
+                                                            <Mail className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                                                         </div>
                                                         Email Address
                                                     </label>
                                                 </div>
                                                 <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                    <input type="email" placeholder="Please enter your email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-700 focus:ring-4 focus:ring-blue-700/20 text-sm sm:text-base text-gray-700 placeholder-gray-800 transition-all duration-200" />
-                                                    <Mail className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-800 group-hover:text-blue-700 transition-colors duration-200" />
+                                                    <input type="email" placeholder="Please enter your email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm sm:text-base text-gray-700 placeholder-gray-400 transition-all duration-200" />
+                                                    <Mail className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" />
                                                 </div>
                                             </div>
 
@@ -1341,8 +1239,8 @@ const HomePage: React.FC = () => {
                                             <div className="group relative">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-green-700/20 to-green-800/20 rounded-lg border border-green-200">
-                                                            <Phone className="h-3 w-3 sm:h-4 sm:w-4 text-green-800" />
+                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-lg border border-green-200">
+                                                            <Phone className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                                                         </div>
                                                         Phone Number
                                                     </label>
@@ -1354,7 +1252,7 @@ const HomePage: React.FC = () => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setShowDialCodes(!showDialCodes)}
-                                                                className="w-full py-3 sm:py-4 px-2.5 sm:px-3 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-700 focus:outline-none focus:border-green-700 focus:ring-4 focus:ring-green-700/20 transition-all duration-200 text-left flex items-center gap-1.5 sm:gap-2 min-w-[120px] sm:min-w-[140px]"
+                                                                className="w-full py-3 sm:py-4 px-2.5 sm:px-3 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-500 focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 transition-all duration-200 text-left flex items-center gap-1.5 sm:gap-2 min-w-[120px] sm:min-w-[140px]"
                                                             >
                                                                 <img
                                                                     src={`https://flagcdn.com/w40/${countryDialCodes.find(c => c.code === selectedDialCode)?.countryCode.toLowerCase()}.png`}
@@ -1366,7 +1264,7 @@ const HomePage: React.FC = () => {
                                                                     }}
                                                                 />
                                                                 <span className="text-sm sm:text-base font-semibold truncate">{selectedDialCode}</span>
-                                                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-800 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                                                 </svg>
                                                             </button>
@@ -1380,7 +1278,7 @@ const HomePage: React.FC = () => {
                                                                                 key={index}
                                                                                 type="button"
                                                                                 onClick={() => handleDialCodeSelect(country.code)}
-                                                                                className={`w-full px-3 py-2.5 rounded-lg hover:bg-green-50 transition-colors duration-200 text-left flex items-center gap-2.5 ${selectedDialCode === country.code ? 'bg-green-100 border-2 border-green-400' : 'border-2 border-transparent'
+                                                                                className={`w-full px-3 py-2.5 rounded-lg hover:bg-green-50 transition-colors duration-200 text-left flex items-center gap-2.5 ${selectedDialCode === country.code ? 'bg-green-100 border-2 border-green-300' : 'border-2 border-transparent'
                                                                                     }`}
                                                                             >
                                                                                 <img
@@ -1397,7 +1295,7 @@ const HomePage: React.FC = () => {
                                                                                     }}
                                                                                 />
                                                                                 <span className="flex-1 text-sm font-medium text-gray-900 truncate">{country.name}</span>
-                                                                                <span className="text-xs sm:text-sm text-gray-800 font-mono font-semibold flex-shrink-0">{country.code}</span>
+                                                                                <span className="text-xs sm:text-sm text-gray-600 font-mono font-semibold flex-shrink-0">{country.code}</span>
                                                                             </button>
                                                                         ))}
                                                                     </div>
@@ -1413,7 +1311,7 @@ const HomePage: React.FC = () => {
                                                             value={contactPhone}
                                                             onChange={handlePhoneInputChange}
                                                             required
-                                                            className="relative flex-1 py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-green-700 focus:ring-4 focus:ring-green-700/20 text-sm sm:text-base text-gray-700 placeholder-gray-800 transition-all duration-200"
+                                                            className="relative flex-1 py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 text-sm sm:text-base text-gray-700 placeholder-gray-400 transition-all duration-200"
                                                         />
                                                     </div>
                                                 </div>
@@ -1431,12 +1329,12 @@ const HomePage: React.FC = () => {
                                         )}
 
                                         {currentStep < totalSteps ? (
-                                            <button type="button" onClick={handleNextStep} className={`${currentStep > 1 ? 'flex-1' : 'w-full'} bg-gradient-to-r from-blue-700 to-blue-800 text-white font-semibold py-3 sm:py-3.5 px-4 rounded-lg sm:rounded-xl hover:shadow-xl hover:shadow-blue-700/30 hover:scale-[1.02] transition-all duration-400 flex items-center justify-center gap-2`}>
+                                            <button type="button" onClick={handleNextStep} className={`${currentStep > 1 ? 'flex-1' : 'w-full'} bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 sm:py-3.5 px-4 rounded-lg sm:rounded-xl hover:shadow-xl hover:shadow-blue-500/30 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2`}>
                                                 <span>Next</span>
                                                 <ChevronRight className="h-4 w-4" />
                                             </button>
                                         ) : (
-                                            <button type="submit" disabled={!contactName || !contactEmail || !contactPhone || isSendingEmail} className="flex-1 bg-gradient-to-r from-blue-700 to-blue-800 text-white font-semibold py-3 sm:py-3.5 px-4 rounded-lg sm:rounded-xl hover:shadow-xl hover:shadow-blue-700/30 hover:scale-[1.02] transition-all duration-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-2">
+                                            <button type="submit" disabled={!contactName || !contactEmail || !contactPhone || isSendingEmail} className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 sm:py-3.5 px-4 rounded-lg sm:rounded-xl hover:shadow-xl hover:shadow-blue-500/30 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-2">
                                                 {isSendingEmail ? (
                                                     <>
                                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1466,7 +1364,7 @@ const HomePage: React.FC = () => {
                             <div className="w-full relative">
                                 <div className="relative space-y-8">
 
-                                    {/* ── Headline ─────────────────────────────────────────────────── */}
+                                    {/*  Headline */}
                                     <div className="text-center">
                                         <p className="text-blue-800 text-xs font-black uppercase tracking-[0.3em] mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                                             Instant comparison
@@ -1480,14 +1378,14 @@ const HomePage: React.FC = () => {
                                         </p>
                                     </div>
 
-                                    {/* ── Mock comparison card ─────────────────────────────────────── */}
+                                    {/*  Mock comparison card  */}
                                     <div className="mx-auto max-w-sm">
                                         <div className="bg-black backdrop-blur-md border border-white/05 rounded-2xl overflow-hidden shadow-2xl shadow-black/40">
 
                                             {/* Card header */}
                                             <div className="bg-white/10 border-b border-white/10 px-4 py-3 flex items-center justify-between">
                                                 <span className="text-white/90 text-[10px] font-black uppercase tracking-widest">
-                                                    4 companies · London → Heathrow
+                                                    {companies?.length}+ companies · London → Heathrow
                                                 </span>
                                                 <span className="text-emerald-400 text-[10px] font-black flex items-center gap-1">
                                                     <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1499,12 +1397,7 @@ const HomePage: React.FC = () => {
 
                                             {/* Company rows */}
                                             <div className="divide-y divide-white/[0.08]">
-                                                {[
-                                                    { name: 'TransferEase', initial: 'T', color: '#ea580c', rating: 4.8, price: 62, diff: 13, tag: 'Top Rated', tagCls: 'bg-amber-800/20 text-amber-400 border-amber-800/30' },
-                                                    { name: 'RideXpress', initial: 'R', color: '#2563eb', rating: 4.4, price: 49, diff: 0, tag: 'Best Price', tagCls: 'bg-emerald-800/20 text-emerald-400 border-emerald-800/30', best: true },
-                                                    { name: 'LuxiCab', initial: 'L', color: '#7c3aed', rating: 4.6, price: 73, diff: 24, tag: null, tagCls: '' },
-                                                    { name: 'CityLink', initial: 'C', color: '#059669', rating: 4.3, price: 54, diff: 5, tag: 'Fastest', tagCls: 'bg-sky-800/20 text-sky-400 border-sky-800/30' },
-                                                ].map((co, i) => (
+                                                {visible.map((co, i) => (
                                                     <div key={i} className={`flex items-center gap-3 px-4 py-3 transition-colors ${co.best ? 'bg-emerald-700/10' : 'hover:bg-white/5'}`}>
                                                         {/* Avatar */}
                                                         <div
@@ -1544,11 +1437,43 @@ const HomePage: React.FC = () => {
 
                                                         {/* Selected radio */}
                                                         <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors
-                                    ${co.best ? 'border-emerald-800 bg-emerald-800' : 'border-white/20'}`}>
+                ${co.best ? 'border-emerald-800 bg-emerald-800' : 'border-white/20'}`}>
                                                             {co.best && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                                                         </div>
                                                     </div>
                                                 ))}
+
+                                                {(
+                                                    <button
+                                                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 hover:bg-white/5 transition-colors"
+                                                    >
+                                                        {/* Stacked avatars preview */}
+                                                        <div className="flex -space-x-1.5">
+                                                            {companies.slice(4, 7).map((co, i) => (
+                                                                <div
+                                                                    key={i}
+                                                                    className="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center text-white text-[8px] font-black"
+                                                                    style={{ backgroundColor: co.color }}
+                                                                >
+                                                                    {co.initial}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <span className="text-white/50 text-[11px] font-semibold">
+                                                            +{remaining} more companies
+                                                        </span>
+                                                    </button>
+                                                )}
+
+                                                {showAll && (
+                                                    <button
+                                                        onClick={() => setShowAll(false)}
+                                                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 hover:bg-white/5 transition-colors"
+                                                    >
+                                                        <ChevronUp className="h-3 w-3 text-white/30" />
+                                                        <span className="text-white/50 text-[11px] font-semibold">Show less</span>
+                                                    </button>
+                                                )}
                                             </div>
 
                                             {/* Card footer */}
@@ -1564,7 +1489,7 @@ const HomePage: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {/* ── Trust row ────────────────────────────────────────────────── */}
+                                    {/* ── Trust row  */}
                                     <div className="flex items-center justify-center gap-8">
                                         {[
                                             {
@@ -1602,7 +1527,7 @@ const HomePage: React.FC = () => {
                                         ))}
                                     </div>
 
-                                    {/* ── Footer note ──────────────────────────────────────────────── */}
+                                    {/*  Footer note  */}
                                     <p className="text-center text-white/90 text-lg font-semibold drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] px-4">
                                         Our service is{" "}
                                         <span className="text-blue-500 font-black">100% free</span>{" "}

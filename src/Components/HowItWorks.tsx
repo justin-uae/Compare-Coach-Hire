@@ -1,6 +1,5 @@
 import React from 'react';
-import { FileText, MessageSquare, Star, ThumbsUp } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { FileText, BarChart2, Star, ThumbsUp } from 'lucide-react';
 
 const HowItWorks: React.FC = () => {
     const steps = [
@@ -8,28 +7,28 @@ const HowItWorks: React.FC = () => {
             number: "01",
             icon: <FileText className="h-8 w-8" />,
             title: "Post Your Job for Free",
-            description: "Submit your coach hire requirements at no cost. Tell us your route, dates, and passenger count.",
+            description: "Submit your coach hire requirements at no cost. Tell us your route, dates, and passenger count — it only takes a minute.",
             color: "from-blue-600 to-blue-500"
         },
         {
             number: "02",
-            icon: <MessageSquare className="h-8 w-8" />,
-            title: "Get Company Quotes",
-            description: "Receive competitive quotes from multiple verified coach hire companies in your area.",
+            icon: <BarChart2 className="h-8 w-8" />,
+            title: "Compare Company Quotes",
+            description: "We gather quotes from multiple verified coach hire companies and display them side by side — prices, ratings, and availability all in one place.",
             color: "from-blue-600 to-blue-500"
         },
         {
             number: "03",
             icon: <Star className="h-8 w-8" />,
-            title: "Review & Select",
-            description: "Compare ratings, reviews, and prices to choose the best coach hire company for your needs.",
+            title: "Pick the Best Deal",
+            description: "Use our comparison tool to filter by price, rating, or vehicle type. When you've found the right company, book directly through Coach Hire Compare.",
             color: "from-blue-600 to-blue-500"
         },
         {
             number: "04",
             icon: <ThumbsUp className="h-8 w-8" />,
-            title: "Rate Your Company",
-            description: "After your journey, leave a review to help others find the best coach hire companies.",
+            title: "Rate Your Experience",
+            description: "After your journey, leave a review to help other travellers find the best-rated coach hire companies on our platform.",
             color: "from-blue-600 to-blue-500"
         }
     ];
@@ -46,14 +45,14 @@ const HowItWorks: React.FC = () => {
             <div className="container mx-auto px-4 lg:px-8 relative z-10">
                 {/* Section Header */}
                 <div className="text-center mb-12 lg:mb-16">
-                    <div className="inline-block bg-blue-500/20 text-blue-600 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+                    <div className="inline-block bg-blue-500/20 text-blue-400 px-4 py-2 rounded-full text-sm font-semibold mb-4">
                         Simple Process
                     </div>
                     <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
                         How It Works
                     </h2>
                     <p className="text-gray-300 text-base lg:text-lg max-w-2xl mx-auto">
-                        Our service is <span className="text-blue-600 font-semibold">100% free</span> for anyone looking for coach hire companies. Get quotes in just 4 easy steps.
+                        Our service is <span className="text-blue-400 font-semibold">100% free</span>. Post your job, compare quotes from multiple companies side by side, and book — all in 4 easy steps.
                     </p>
                 </div>
 
@@ -90,16 +89,6 @@ const HowItWorks: React.FC = () => {
                             </div>
                         </div>
                     ))}
-                </div>
-
-                {/* Footer CTA */}
-                <div className="text-center mt-12">
-                    <p className="text-gray-600 text-base">
-                        Not ready to post a job?{" "}
-                        <Link to={'/contact'} className="text-blue-600 hover:text-blue-300 font-semibold underline underline-offset-2 transition-colors duration-200">
-                            Ask an expert.
-                        </Link>
-                    </p>
                 </div>
             </div>
         </section>
