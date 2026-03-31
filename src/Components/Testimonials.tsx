@@ -16,21 +16,21 @@ const Testimonials: React.FC = () => {
             name: "LA Travel",
             company: "Coach Hire Operator",
             rating: 5,
-            comment: "We have been using Coach Hire Compare for only 3 weeks and we have had an excellent experience so far. We have made over £9000 worth of bookings from clients."
+            comment: "We have been using Compare Transport for only 3 weeks and we have had an excellent experience so far. We have made over GBP 9000 worth of bookings from clients."
         },
         {
             id: 2,
             name: "Ace Travel",
             company: "Coach Hire Operator",
             rating: 5,
-            comment: "I would like to thank the team at Coach Hire Compare for delivering us many new customers for the last few months. Our company now has contracts from 2 schools which have enabled us to get another coach on the road."
+            comment: "I would like to thank the team at Compare Transport for delivering us many new customers for the last few months. Our company now has contracts from 2 schools which have enabled us to get another coach on the road."
         },
         {
             id: 3,
             name: "Swan Travel",
             company: "Coach Hire Operator",
             rating: 5,
-            comment: "Brilliant service from Coach Hire Compare from the day we were registered. The team is very professional and are always looking to improve the service they offer us."
+            comment: "Brilliant service from Compare Transport from the day we were registered. The team is very professional and are always looking to improve the service they offer us."
         }
     ];
 

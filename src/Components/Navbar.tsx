@@ -36,12 +36,12 @@ const Navbar: React.FC = () => {
                                 <div className="absolute inset-0 bg-blue-500/100/10 rounded-xl blur-sm group-hover:bg-blue-500/100/20 transition-all"></div>
                                 <img
                                     src={Logo}
-                                    alt="Coach Hire Compare Logo"
+                                    alt="Compare Transport Logo"
                                     className="h-10 sm:h-14 md:h-14 w-auto transition-transform duration-300 group-hover:scale-105 relative z-10"
                                 />
                             </div>
                             <h1 className="text-lg sm:text-xl font-bold text-white">
-                                Coach Hire<span className="text-blue-500"> Compare</span>
+                                Compare<span className="text-blue-500"> Transport</span>
                             </h1>
                         </Link>
 
@@ -71,18 +71,6 @@ const Navbar: React.FC = () => {
                                     <span className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-blue-500"></span>
                                 )}
                             </Link>
-                            {/* <Link
-                                to="/askanexpert"
-                                className={`font-medium transition-colors relative py-1 ${isActive('/askanexpert')
-                                    ? 'text-blue-500'
-                                    : 'text-gray-300 hover:text-blue-500'
-                                    }`}
-                            >
-                                Ask an expert
-                                {isActive('/askanexpert') && (
-                                    <span className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-blue-500"></span>
-                                )}
-                            </Link> */}
                             <Link
                                 to="/about"
                                 className={`font-medium transition-colors relative py-1 ${isActive('/about')
@@ -95,7 +83,19 @@ const Navbar: React.FC = () => {
                                     <span className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-blue-500"></span>
                                 )}
                             </Link>
-
+                            {/* Partner Link - Desktop */}
+                            <Link
+                                to="/partner"
+                                className={`font-medium transition-colors relative py-1 ${isActive('/partner')
+                                    ? 'text-blue-500'
+                                    : 'text-gray-300 hover:text-blue-500'
+                                    }`}
+                            >
+                                List Your Company
+                                {isActive('/partner') && (
+                                    <span className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-blue-500"></span>
+                                )}
+                            </Link>
                             <Link
                                 to="/contact"
                                 className={`font-medium transition-colors relative py-1 ${isActive('/contact')
@@ -108,7 +108,6 @@ const Navbar: React.FC = () => {
                                     <span className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-blue-500"></span>
                                 )}
                             </Link>
-
                             <button
                                 onClick={handleWhatsAppClick}
                                 className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-500 hover:from-green-500 hover:to-green-300 text-white font-bold px-4 lg:px-6 py-2.5 rounded-full transition-all transform hover:scale-105 shadow-lg hover:shadow-xl text-sm"
@@ -163,6 +162,17 @@ const Navbar: React.FC = () => {
                                 >
                                     About Us
                                 </Link>
+                                {/* Partner Link - Mobile */}
+                                <Link
+                                    to="/partner"
+                                    onClick={handleLinkClick}
+                                    className={`py-3 px-4 rounded-lg font-medium transition-all ${isActive('/partner')
+                                        ? 'bg-blue-500/10 text-blue-500 border-l-4 border-blue-500'
+                                        : 'text-gray-300 hover:bg-gray-800/50 hover:text-blue-500'
+                                        }`}
+                                >
+                                    List Your Company
+                                </Link>
                                 <Link
                                     to="/contact"
                                     onClick={handleLinkClick}
@@ -173,7 +183,6 @@ const Navbar: React.FC = () => {
                                 >
                                     Contact
                                 </Link>
-
                                 <div className="pt-4 px-4">
                                     <button
                                         onClick={() => {

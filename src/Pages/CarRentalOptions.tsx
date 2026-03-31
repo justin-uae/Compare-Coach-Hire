@@ -134,7 +134,7 @@ function groupProductsForRental(
             company,
             baseFare,
             rentalPrice,
-            currency: '£',
+            currency: 'GBP',
             rating: parseFloat(String(product.rating ?? '4.5')),
             reviews: parseInt(String(product.reviews ?? '0'), 10),
             eta: String(product.eta ?? product.estimatedArrival ?? '5 min').replace(/^"|"$/g, ''),
@@ -185,7 +185,6 @@ const CompanyOfferRow: React.FC<{
 }> = ({ offer, lowestRentalPrice, isSelected, onSelect }) => {
     const isCheapest = offer.rentalPrice === lowestRentalPrice;
     const color = companyColor(offer.company);
-    const diff = offer.rentalPrice - lowestRentalPrice;
 
     return (
         <div
@@ -219,12 +218,12 @@ const CompanyOfferRow: React.FC<{
             </div>
 
             <div className="text-right flex-shrink-0">
-                <div className={`text-sm font-black ${isCheapest ? 'text-emerald-700' : 'text-gray-900'}`}>
+                <div className="text-[12px] text-red-400 line-through">
+                    GBP {(offer.rentalPrice * 1.15).toFixed(0)}
+                </div>
+                <div className={`text-sm font-black ${isCheapest ? 'text-red-700' : 'text-red-500'}`}>
                     {offer.currency}{offer.rentalPrice}
                 </div>
-                {diff > 0 && (
-                    <div className="text-[10px] text-red-400 font-semibold">+{offer.currency}{diff}</div>
-                )}
             </div>
 
             <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
@@ -271,9 +270,9 @@ const VehicleRentalCard: React.FC<{
                     {group.vehicleType}
                 </div>
                 <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl text-right">
-                    <p className="text-white font-black text-base leading-tight">£{lowestRentalPrice}</p>
+                    <p className="text-white font-black text-base leading-tight">GBP {lowestRentalPrice}</p>
                     {savings > 0 && (
-                        <p className="text-emerald-300 text-[10px] font-semibold">save £{savings}</p>
+                        <p className="text-emerald-300 text-[10px] font-semibold">save GBP {savings}</p>
                     )}
                 </div>
             </div>

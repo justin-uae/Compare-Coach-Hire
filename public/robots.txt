@@ -10,7 +10,7 @@ Disallow: /api/
 Disallow: /private/
 
 # Sitemap location
-Sitemap: https://www.minibushirelondon.org/sitemap.xml
+Sitemap: https://www.comparetransport.co.uk/sitemap.xml
 
 # Crawl-delay (optional - helps prevent server overload)
 Crawl-delay: 1

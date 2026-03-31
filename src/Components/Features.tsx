@@ -50,7 +50,7 @@ const Features: React.FC = () => {
                         Why Choose Us
                     </div>
                     <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-                        Why Choose Coach Hire Compare?
+                        Why Choose Compare Transport?
                     </h2>
                     <p className="text-gray-600 text-base lg:text-lg max-w-2xl mx-auto">
                         The UK's largest coach and minibus hire comparison platform — saving you time and money on every group journey.

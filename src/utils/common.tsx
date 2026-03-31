@@ -565,10 +565,10 @@ export const calculateRentalDays = (pickupDate: Date, dropoffDate: Date) => {
 // Company Colours 
 
 export const COMPANY_COLORS: Record<string, string> = {
-    'A2B Coaches': '#ea580c', // orange
-    'Yes Coach Hire': '#2563eb', // blue
+    'DTS Nationwide': '#ea580c', // orange
+    'Imperial Travel': '#2563eb', // blue
     'Global Bus Rental': '#7c3aed', // violet
-    'Better Fares': '#059669', // emerald
+    'GSN Coach Hire': '#059669', // emerald
     'Nationwide Minibuses': '#db2777', // pink
     'GB Coach Hire': '#0891b2', // cyan
     'Ace Coaches': '#d97706', // amber
@@ -621,10 +621,10 @@ export const TagPill: React.FC<{ tag?: string; isCheapest?: boolean }> = ({ tag,
 };
 
 export const companies = [
-    { name: 'A2B Coaches', initial: 'A', color: '#ea580c', rating: 4.8, price: 62, diff: 13, tag: 'Top Rated', tagCls: 'bg-amber-800/20 text-amber-400 border-amber-800/30' },
-    { name: 'Yes Coach Hire', initial: 'Y', color: '#2563eb', rating: 4.4, price: 49, diff: 0, tag: 'Best Price', tagCls: 'bg-emerald-800/20 text-emerald-400 border-emerald-800/30', best: true },
+    { name: 'DTS Nationwide', initial: 'A', color: '#ea580c', rating: 4.8, price: 62, diff: 13, tag: 'Top Rated', tagCls: 'bg-amber-800/20 text-amber-400 border-amber-800/30' },
+    { name: 'Imperial Travel', initial: 'Y', color: '#2563eb', rating: 4.4, price: 49, diff: 0, tag: 'Best Price', tagCls: 'bg-emerald-800/20 text-emerald-400 border-emerald-800/30', best: true },
     { name: 'Global Bus Rental', initial: 'G', color: '#7c3aed', rating: 4.6, price: 73, diff: 24, tag: null, tagCls: '' },
-    { name: 'Better Fares', initial: 'B', color: '#059669', rating: 4.3, price: 54, diff: 5, tag: 'Fastest', tagCls: 'bg-sky-800/20 text-sky-400 border-sky-800/30' },
+    { name: 'GSN Coach Hire', initial: 'B', color: '#059669', rating: 4.3, price: 54, diff: 5, tag: 'Fastest', tagCls: 'bg-sky-800/20 text-sky-400 border-sky-800/30' },
     { name: 'Nationwide Minibuses', initial: 'N', color: '#db2777', rating: 4.3, price: 58, diff: 9, tag: null, tagCls: '' },
     { name: 'GB Coach Hire', initial: 'G', color: '#0891b2', rating: 4.6, price: 65, diff: 16, tag: null, tagCls: '' },
     { name: 'Ace Coaches', initial: 'A', color: '#d97706', rating: 4.4, price: 69, diff: 20, tag: null, tagCls: '' },

@@ -11,6 +11,7 @@ const Footer: React.FC = () => {
         { name: 'Vehicles', href: '/vehicles' },
         // { name: 'Ask an Expert', href: '/askanexpert' },
         { name: 'About Us', href: '/about' },
+        { name: 'List Your Company', href: '/partner' },
         { name: 'Contact Us', href: '/contact' },
     ];
 
@@ -44,11 +45,11 @@ const Footer: React.FC = () => {
                             <img
                                 src={Logo}
                                 loading='lazy'
-                                alt="Coach Hire Compare Logo"
+                                alt="Compare Transport Logo"
                                 className="h-16 sm:h-16 md:h-16 w-auto transition-transform duration-300 group-hover:scale-105"
                             />
                             <h1 className="text-lg sm:text-xl font-bold text-white">
-                                Coach Hire<span className="text-blue-600"> Compare</span>
+                                Compare <span className="text-blue-600"> Transport</span>
                             </h1>
                         </Link>
 
@@ -65,7 +66,7 @@ const Footer: React.FC = () => {
                                     <MapPin className="w-4 h-4 text-white" />
                                 </div>
                                 <span className="text-sm text-left font-medium">
-                                    Parkshot House, 5 Kew Rd, Richmond TW9 2PR, UK
+                                    20 Wenlock Road, London, England, N1 7GU
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 group">
@@ -73,10 +74,10 @@ const Footer: React.FC = () => {
                                     <Mail className="w-4 h-4 text-white" />
                                 </div>
 
-                                <a href="mailto:info@coachhirecompare.co.uk"
+                                <a href="mailto:info@comparetransport.co.uk"
                                     className="text-sm hover:text-blue-600 transition-colors font-medium"
                                 >
-                                    info@coachhirecompare.co.uk
+                                    info@comparetransport.co.uk
                                 </a>
                             </div>
                         </div>
@@ -155,7 +156,7 @@ const Footer: React.FC = () => {
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-300 font-bold transition-colors"
                         >
-                            Coach Hire Compare
+                            Compare Transport
                         </a>
                         {' '}• All rights reserved
                     </p>

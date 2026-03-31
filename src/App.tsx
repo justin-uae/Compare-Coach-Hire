@@ -18,6 +18,8 @@ import CarRentalOptions from './Pages/CarRentalOptions';
 import TermsAndConditions from './Pages/Termsandconditions';
 import PrivacyPolicy from './Pages/PrivacyPolicy';
 import { WhatsAppButton } from './Components/WhatsAppButton';
+import PartnerSignup from './Pages/PartnerSignup';
+import { PartnerButton } from './Components/PartnerButton';
 // import AskAnExpert from './Components/AskAnExpert';
 
 function App() {
@@ -38,6 +40,7 @@ function App() {
             <Route path="/transport-options" element={<TaxiOptions />} />
             <Route path="/car-rental-options" element={<CarRentalOptions />} />
             <Route path="/car-rental/:carId" element={<CarRentalDetails />} />
+            <Route path="/partner" element={<PartnerSignup />} />
             <Route path="/payment" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
             <Route path="/terms" element={<TermsAndConditions />} />
@@ -45,6 +48,7 @@ function App() {
           </Routes>
           <Footer />
           <WhatsAppButton />
+          <PartnerButton />
         </div>
       </Router>
     </Provider>

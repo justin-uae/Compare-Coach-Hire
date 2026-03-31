@@ -21,7 +21,7 @@ const HowItWorks: React.FC = () => {
             number: "03",
             icon: <Star className="h-8 w-8" />,
             title: "Pick the Best Deal",
-            description: "Use our comparison tool to filter by price, rating, or vehicle type. When you've found the right company, book directly through Coach Hire Compare.",
+            description: "Use our comparison tool to filter by price, rating, or vehicle type. When you've found the right company, book directly through Compare Transport.",
             color: "from-blue-600 to-blue-500"
         },
         {

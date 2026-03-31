@@ -51,7 +51,7 @@ const AboutUs: React.FC = () => {
     ];
 
     const milestones = [
-        { year: '2008', title: 'Founded', description: 'Coach Hire Compare was established with a mission to simplify the process of finding and booking reliable coach hire across the UK.' },
+        { year: '2008', title: 'Founded', description: 'Compare Transport was established with a mission to simplify the process of finding and booking reliable coach hire across the UK.' },
         { year: '2011', title: 'Network Growth', description: 'Expanded our operator network to cover all major UK cities and regions, giving customers access to hundreds of verified companies.' },
         { year: '2015', title: 'Quote Engine Launch', description: 'Launched our online quote engine, allowing customers to post jobs and receive multiple competitive quotes within minutes for free.' },
         { year: '2019', title: 'Reviews System', description: 'Introduced our operator ratings and reviews system, helping customers make informed decisions based on genuine feedback.' },
@@ -80,8 +80,8 @@ const AboutUs: React.FC = () => {
         <>
             <SEOHead
                 title="About Us - UK's Largest Coach Hire Comparison Website"
-                description="Learn about Coach Hire Compare — the UK's largest and fastest growing coach and minibus hire price comparison website. Free quotes from hundreds of verified operators across the UK."
-                keywords="about coach hire compare, UK coach hire comparison, free coach hire quotes, minibus hire comparison"
+                description="Learn about Compare Transport — the UK's largest and fastest growing coach and minibus hire price comparison website. Free quotes from hundreds of verified operators across the UK."
+                keywords="about Compare Transport, UK coach hire comparison, free coach hire quotes, minibus hire comparison"
                 canonicalUrl="/about"
             />
             <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 pt-16">
@@ -95,7 +95,7 @@ const AboutUs: React.FC = () => {
                     <div className="container mx-auto px-4 relative z-10">
                         <div className="max-w-4xl mx-auto text-center">
                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 animate-fade-in">
-                                About Coach Hire Compare
+                                About Compare Transport
                             </h1>
                             <p className="text-xl md:text-2xl text-blue-100 mb-8 animate-fade-in-delay">
                                 The UK's Largest Coach & Minibus Hire Price Comparison Website
@@ -136,7 +136,7 @@ const AboutUs: React.FC = () => {
                                 </h2>
                                 <div className="space-y-4 text-gray-700 leading-relaxed">
                                     <p>
-                                        Coach Hire Compare was built with one goal in mind: to make finding reliable, affordable coach and
+                                        Compare Transport was built with one goal in mind: to make finding reliable, affordable coach and
                                         minibus hire as simple as possible. We know that organising group travel can be time consuming and
                                         expensive — so we created a platform that does all the hard work for you.
                                     </p>
@@ -147,8 +147,7 @@ const AboutUs: React.FC = () => {
                                     </p>
                                     <p>
                                         Today, hundreds of operators across every UK town and city are part of our network. Whether you
-                                        need a minibus for a school trip or a fleet of coaches for a large corporate event, Coach Hire
-                                        Compare is the fastest and most cost-effective way to book — and it won't cost you a penny.
+                                        need a minibus for a school trip or a fleet of coaches for a large corporate event, Compare Transport is the fastest and most cost-effective way to book — and it won't cost you a penny.
                                     </p>
                                 </div>
                             </div>
@@ -212,7 +211,7 @@ const AboutUs: React.FC = () => {
                     <div className="max-w-6xl mx-auto">
                         <div className="text-center mb-12">
                             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                                Why Choose Coach Hire Compare?
+                                Why Choose Compare Transport?
                             </h2>
                             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                                 The values and advantages that make us the UK's leading coach hire comparison platform.

@@ -13,7 +13,7 @@ const AboutService: React.FC = () => {
         {
             icon: <BarChart2 className="h-8 w-8" />,
             title: "Compare & Book in One Place",
-            description: "See prices, ratings, vehicle types, and availability from different companies all on one screen. When you find the right match, book instantly through Coach Hire Compare.",
+            description: "See prices, ratings, vehicle types, and availability from different companies all on one screen. When you find the right match, book instantly through Compare Transport.",
             color: "from-blue-600 to-blue-500"
         },
         {
@@ -46,7 +46,7 @@ const AboutService: React.FC = () => {
                         About Us
                     </div>
                     <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
-                        Welcome to Coach Hire Compare
+                        Welcome to Compare Transport
                     </h2>
                     <p className="text-gray-300 text-base lg:text-lg max-w-3xl mx-auto">
                         The UK's largest and fastest growing coach hire price comparison platform —
@@ -58,13 +58,13 @@ const AboutService: React.FC = () => {
                 <div className="max-w-4xl mx-auto mb-16">
                     <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-2xl p-8 lg:p-12 border border-gray-600 mb-12">
                         <p className="text-gray-300 leading-relaxed mb-6">
-                            Coach Hire Compare works with hundreds of operators across the UK to bring you the most competitive coach and minibus hire deals available. With over 50 years of combined industry experience within our organisation, we've built a platform that puts the power back in your hands.
+                            Compare Transport works with hundreds of operators across the UK to bring you the most competitive coach and minibus hire deals available. With over 50 years of combined industry experience within our organisation, we've built a platform that puts the power back in your hands.
                         </p>
                         <p className="text-gray-300 leading-relaxed mb-6">
-                            We are the only website where filling in one form gets you live availability and pricing from across the entire coach hire market. Our comparison engine displays quotes from multiple companies side by side — so you can instantly see who offers the best price, the best rating, and the right vehicle for your group. When you've made your choice, you can book directly through Coach Hire Compare in just a few clicks.
+                            We are the only website where filling in one form gets you live availability and pricing from across the entire coach hire market. Our comparison engine displays quotes from multiple companies side by side — so you can instantly see who offers the best price, the best rating, and the right vehicle for your group. When you've made your choice, you can book directly through Compare Transport in just a few clicks.
                         </p>
                         <p className="text-gray-300 leading-relaxed">
-                            Finding a reliable, low-cost coach hire company used to be time consuming — 6 out of 10 people pay more than they need to. Coach Hire Compare solves that by putting every option in front of you at once, so you always get the best-reviewed operator at the best price, without having to search anywhere else.
+                            Finding a reliable, low-cost coach hire company used to be time consuming — 6 out of 10 people pay more than they need to. Compare Transport solves that by putting every option in front of you at once, so you always get the best-reviewed operator at the best price, without having to search anywhere else.
                         </p>
                     </div>
 
@@ -75,7 +75,7 @@ const AboutService: React.FC = () => {
                             <div>
                                 <h3 className="text-white font-bold text-xl mb-3">Compare Companies, Then Book Instantly</h3>
                                 <p className="text-gray-200 leading-relaxed">
-                                    Our platform shows you quotes from multiple coach hire companies side by side — prices, vehicle types, passenger capacity, and customer ratings all visible at once. There's no back-and-forth, no waiting for callbacks. Once you spot the right deal, you can confirm your booking directly through Coach Hire Compare in seconds.
+                                    Our platform shows you quotes from multiple coach hire companies side by side — prices, vehicle types, passenger capacity, and customer ratings all visible at once. There's no back-and-forth, no waiting for callbacks. Once you spot the right deal, you can confirm your booking directly through Compare Transport in seconds.
                                 </p>
                             </div>
                         </div>
@@ -102,7 +102,7 @@ const AboutService: React.FC = () => {
                     <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-2xl p-8 lg:p-12 border border-gray-600">
                         <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
                             <Award className="h-8 w-8 text-blue-400" />
-                            Why Use Coach Hire Compare?
+                            Why Use Compare Transport?
                         </h3>
                         <div className="grid sm:grid-cols-2 gap-4 text-gray-300">
                             {[
@@ -131,7 +131,7 @@ const AboutService: React.FC = () => {
                             Ready to Compare & Book Your Coach?
                         </h3>
                         <p className="text-gray-300 mb-6 max-w-2xl">
-                            Post your job for free, compare quotes from multiple companies in seconds, and book the best deal — all through Coach Hire Compare. No hidden charges, not a penny.
+                            Post your job for free, compare quotes from multiple companies in seconds, and book the best deal — all through Compare Transport. No hidden charges, not a penny.
                         </p>
                         <Link
                             to={'/contact'}

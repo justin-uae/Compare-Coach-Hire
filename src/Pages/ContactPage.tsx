@@ -122,8 +122,8 @@ const Contact: React.FC = () => {
         <>
             <SEOHead
                 title="Contact Us - Get a Free Minibus Hire Quote"
-                description="Contact Coach Hire Compare for a free quote. Call +0330 113 2500, email us, or fill in our booking form. Available 24/7 for all group transport enquiries."
-                keywords="contact Coach Hire Compare, minibus hire quote, book minibus UK, minibus hire enquiry"
+                description="Contact Compare Transport for a free quote. Call +0333 0111 870, email us, or fill in our booking form. Available 24/7 for all group transport enquiries."
+                keywords="contact Compare Transport, minibus hire quote, book minibus UK, minibus hire enquiry"
                 canonicalUrl="/contact"
             />
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 pt-16">
@@ -351,7 +351,7 @@ const Contact: React.FC = () => {
                                         <div className="min-w-0">
                                             <h3 className="font-black text-base text-gray-900 mb-1">Phone</h3>
                                             <a href={`tel:${phoneNumber}`} className="text-sm text-blue-700 hover:text-blue-800 transition-colors break-all font-bold">
-                                                0330 113 2500
+                                                0333 0111 870
                                             </a>
                                             <br />
                                         </div>
@@ -376,7 +376,7 @@ const Contact: React.FC = () => {
                                         <div className="min-w-0">
                                             <h3 className="font-black text-base text-gray-900 mb-1">Address</h3>
                                             <span className="text-sm text-center md:text-left font-medium">
-                                                Cameron House, West Drayton, UB7 7QG
+                                                20 Wenlock Road, London, England, N1 7GU
                                             </span>
                                             <br />
                                         </div>
@@ -398,14 +398,14 @@ const Contact: React.FC = () => {
                             {/* Map */}
                             <div className="bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-blue-100 h-72 sm:h-80">
                                 <iframe
-                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2483.1221665739185!2d-0.47608692292433996!3d51.510974671814125!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x487671ff0f41cd85%3A0xac64942fdd446134!2sCameron%20House%2C%20Yiewsley%2C%20West%20Drayton%20UB7%207RP%2C%20UK!5e0!3m2!1sen!2sae!4v1770014277142!5m2!1sen!2sae"
+                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2953.9021853174254!2d-0.09625862292332081!3d51.53057897181866!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48761ca7536f613b%3A0xfd8b59fdb96d2b66!2s20%20Wenlock%20Rd%2C%20London%20N1%207GU%2C%20UK!5e1!3m2!1sen!2sae!4v1774360950613!5m2!1sen!2sae"
                                     width="100%"
                                     height="100%"
                                     style={{ border: 0 }}
                                     allowFullScreen
                                     loading="lazy"
                                     referrerPolicy="no-referrer-when-downgrade"
-                                    title="Cameron House, West Drayton, UB7 7QG"
+                                    title="20 Wenlock Road, London, England, N1 7GU"
                                 />
                             </div>
                         </div>

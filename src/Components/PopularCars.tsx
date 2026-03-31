@@ -90,7 +90,7 @@ function groupProductsByVehicleType(
             company,
             baseFare,
             price,
-            currency: '£',
+            currency: 'GBP',
             rating: parseFloat(String(product.rating ?? '4.5')),
             reviews: parseInt(String(product.reviews ?? '0'), 10),
             eta: String(product.eta ?? product.estimatedArrival ?? '5 min').replace(/^"|"$/g, ''),
@@ -178,7 +178,7 @@ const OfferRow: React.FC<{
                     {offer.currency}{offer.baseFare}
                 </div>
                 {diff > 0 && (
-                    <div className="text-[9px] text-red-400 font-semibold">+£{diff.toFixed(2)} more</div>
+                    <div className="text-[9px] text-red-400 font-semibold">+GBP {diff.toFixed(2)} more</div>
                 )}
             </div>
         </button>
@@ -250,9 +250,9 @@ const VehicleCard: React.FC<{
                     </div>
                     <div className="text-right">
                         <div className="text-[10px] text-white/70">From</div>
-                        <div className="text-xl font-black text-white leading-none">£{lowestBaseFare}</div>
+                        <div className="text-xl font-black text-white leading-none">GBP {lowestBaseFare}</div>
                         {savings > 0 && (
-                            <div className="text-[10px] text-emerald-300 font-bold">Save up to £{savings}</div>
+                            <div className="text-[10px] text-emerald-300 font-bold">Save up to GBP {savings}</div>
                         )}
                     </div>
                 </div>
@@ -326,7 +326,7 @@ const PopularCars: React.FC<PopularCarsProps> = ({
         if (onBookOffer) {
             onBookOffer(vehicle, offer);
         } else {
-            console.log('Book:', vehicle.displayName, '|', offer.company, '| £' + offer.price, '| variantId:', offer.variantId);
+            console.log('Book:', vehicle.displayName, '|', offer.company, '| GBP' + offer.price, '| variantId:', offer.variantId);
         }
     }, [onBookOffer]);
 

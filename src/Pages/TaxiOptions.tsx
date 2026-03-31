@@ -139,7 +139,7 @@ function groupProductsByVehicleType(
             company,
             baseFare: baseFareOffer,
             price,
-            currency: '£',
+            currency: 'GBP',
             rating: parseFloat(String(product.rating ?? '4.5')),
             reviews: parseInt(String(product.reviews ?? '0'), 10),
             eta: String(product.eta ?? product.estimatedArrival ?? '5 min').replace(/^"|"$/g, ''),
@@ -194,10 +194,8 @@ const CompanyOfferRow: React.FC<{
 }> = ({ offer, lowestPrice, isSelected, onSelect, tripType }) => {
     const isReturn = tripType === 'return';
     const displayPrice = isReturn ? offer.price * 2 : offer.price;
-    const displayLowest = isReturn ? lowestPrice * 2 : lowestPrice;
     const isCheapest = offer.price === lowestPrice;
     const color = companyColor(offer.company);
-    const diff = parseFloat((displayPrice - displayLowest).toFixed(2));
 
     // Format: no decimals if whole number, else 2dp
     const fmt = (n: number) => Number.isInteger(n) ? `${n}` : n.toFixed(0); //possible bug, check in future
@@ -238,12 +236,14 @@ const CompanyOfferRow: React.FC<{
 
             <div className="text-right flex-shrink-0">
                 <div className="text-[9px] text-gray-400 leading-none mb-0.5">{isReturn ? 'return' : 'from'}</div>
-                <div className="text-xl sm:text-2xl font-black text-gray-900 leading-none">
-                    £{fmt(displayPrice)}
+                <div>
+                    <div className="text-[12px] text-red-400 line-through">
+                        GBP {fmt(displayPrice * 1.15)}
+                    </div>
+                    <div className="text-xl sm:text-2xl font-black text-red-600 leading-none">
+                        GBP {fmt(displayPrice)}
+                    </div>
                 </div>
-                {diff > 0 && (
-                    <div className="text-[10px] text-red-500 font-semibold">+{offer.currency}{fmt(diff)}</div>
-                )}
             </div>
 
             <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
@@ -319,10 +319,10 @@ const TaxiCard: React.FC<{
                             {isReturn ? 'return from' : 'from'}
                         </div>
                         <div className="text-xl sm:text-2xl font-black text-gray-900 leading-none">
-                            £{displayPrice.toFixed(0)}
+                            GBP {displayPrice.toFixed(0)}
                         </div>
                         {savings > 0 && (
-                            <div className="text-[10px] text-emerald-600 font-bold mt-0.5">save £{savings}</div>
+                            <div className="text-[10px] text-emerald-600 font-bold mt-0.5">save GBP {savings}</div>
                         )}
                         {tripType === 'return' && (
                             <div className="text-[9px] text-blue-500 font-semibold mt-0.5">×2 return</div>

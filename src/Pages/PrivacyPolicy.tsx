@@ -72,7 +72,7 @@ const PrivacyPolicy: React.FC = () => {
                 'Your information, including Personal Data, may be transferred to — and maintained on — computers located outside of your state, province, country or other governmental jurisdiction.',
                 'If you are located outside United Kingdom and choose to provide information to us, please note that we transfer the data, including Personal Data, to United Kingdom and process it there.',
                 'Your consent to this Privacy Policy followed by your submission of such information represents your agreement to that transfer.',
-                'Coach Hire Compare will take all steps reasonably necessary to ensure that your data is treated securely and in accordance with this Privacy Policy.'
+                'Compare Transport will take all steps reasonably necessary to ensure that your data is treated securely and in accordance with this Privacy Policy.'
             ]
         },
         {
@@ -91,8 +91,8 @@ const PrivacyPolicy: React.FC = () => {
             title: 'Disclosure of Data',
             icon: <Lock className="h-6 w-6" />,
             content: [
-                'Coach Hire Compare may disclose your Personal Data in the good faith belief that such action is necessary to comply with a legal obligation.',
-                'To protect and defend the rights or property of Coach Hire Compare.',
+                'Compare Transport may disclose your Personal Data in the good faith belief that such action is necessary to comply with a legal obligation.',
+                'To protect and defend the rights or property of Compare Transport.',
                 'To prevent or investigate possible wrongdoing in connection with the Service.',
                 'To protect the personal safety of users of the Service or the public.',
                 'To protect against legal liability.'
@@ -148,8 +148,8 @@ const PrivacyPolicy: React.FC = () => {
     return (
         <>
             <SEOHead
-                title="Privacy Policy - Coach Hire Compare"
-                description="Read our privacy policy to understand how Coach Hire Compare collects, uses and protects your personal data in compliance with UK GDPR regulations."
+                title="Privacy Policy - Compare Transport"
+                description="Read our privacy policy to understand how Compare Transport collects, uses and protects your personal data in compliance with UK GDPR regulations."
                 keywords="privacy policy minibus hire, data protection, GDPR compliance, personal data policy"
                 canonicalUrl="/privacy"
                 noIndex={false}
@@ -165,7 +165,7 @@ const PrivacyPolicy: React.FC = () => {
                             Privacy Policy
                         </h2>
                         <p className="text-gray-600 text-base lg:text-lg max-w-2xl mx-auto">
-                            Coach Hire Compare ("us", "we", or "our") operates the https://www.minibushirelondon.org website (the "Service").
+                            Compare Transport ("us", "we", or "our") operates the https://www.minibushirelondon.org website (the "Service").
                             This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service.
                         </p>
                     </div>
