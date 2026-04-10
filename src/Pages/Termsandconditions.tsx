@@ -18,8 +18,8 @@ const TermsAndConditions: React.FC = () => {
             icon: <CreditCard className="h-6 w-6" />,
             content: [
                 'Option 1 - Deposit via card at the time of booking + outstanding balance cash to the driver',
-                'Option 2 - Deposit via card at the time of booking + outstanding balance via card prior to travel. A second card transaction is subject to an admin fee of GBP 20 or 5% whichever is greater',
-                'Option 3 - Full payment via card (max card limit is GBP 500)',
+                'Option 2 - Deposit via card at the time of booking + outstanding balance via card prior to travel. A second card transaction is subject to an admin fee of £20 or 5% whichever is greater',
+                'Option 3 - Full payment via card (max card limit is £500)',
                 'Option 4 - Full payment via BACS / CHAPS / Bank Transfer',
                 'We cannot make any booking until we have received the minimum deposit. The latest the balance can be settled by is cash on the day to the driver.'
             ]

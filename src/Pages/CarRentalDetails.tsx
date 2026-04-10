@@ -1085,7 +1085,7 @@ Please provide me with pricing options and availability.`;
                                 <div className="space-y-3">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-600">Daily Rate</span>
-                                        <span className="font-semibold text-gray-900">GBP {dailyRate}</span>
+                                        <span className="font-semibold text-gray-900">£{dailyRate}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-600">Number of Days</span>
@@ -1093,7 +1093,7 @@ Please provide me with pricing options and availability.`;
                                     </div>
                                     <div className="border-t-2 border-gray-200 pt-3 flex justify-between">
                                         <span className="font-bold text-gray-900">Total Amount</span>
-                                        <span className="text-2xl font-bold text-orange-600">GBP {totalPrice}</span>
+                                        <span className="text-2xl font-bold text-orange-600">£{totalPrice}</span>
                                     </div>
                                 </div>
 

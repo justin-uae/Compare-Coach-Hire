@@ -139,7 +139,7 @@ function groupProductsByVehicleType(
             company,
             baseFare: baseFareOffer,
             price,
-            currency: 'GBP',
+            currency: '£',
             rating: parseFloat(String(product.rating ?? '4.5')),
             reviews: parseInt(String(product.reviews ?? '0'), 10),
             eta: String(product.eta ?? product.estimatedArrival ?? '5 min').replace(/^"|"$/g, ''),
@@ -238,10 +238,10 @@ const CompanyOfferRow: React.FC<{
                 <div className="text-[9px] text-gray-400 leading-none mb-0.5">{isReturn ? 'return' : 'from'}</div>
                 <div>
                     <div className="text-[12px] text-red-400 line-through">
-                        GBP {fmt(displayPrice * 1.15)}
+                        £{fmt(displayPrice * 1.15)}
                     </div>
                     <div className="text-xl sm:text-2xl font-black text-red-600 leading-none">
-                        GBP {fmt(displayPrice)}
+                        £{fmt(displayPrice)}
                     </div>
                 </div>
             </div>
@@ -319,10 +319,10 @@ const TaxiCard: React.FC<{
                             {isReturn ? 'return from' : 'from'}
                         </div>
                         <div className="text-xl sm:text-2xl font-black text-gray-900 leading-none">
-                            GBP {displayPrice.toFixed(0)}
+                            £{displayPrice.toFixed(0)}
                         </div>
                         {savings > 0 && (
-                            <div className="text-[10px] text-emerald-600 font-bold mt-0.5">save GBP {savings}</div>
+                            <div className="text-[10px] text-emerald-600 font-bold mt-0.5">save £{savings}</div>
                         )}
                         {tripType === 'return' && (
                             <div className="text-[9px] text-blue-500 font-semibold mt-0.5">×2 return</div>

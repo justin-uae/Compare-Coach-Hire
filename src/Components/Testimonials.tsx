@@ -16,7 +16,7 @@ const Testimonials: React.FC = () => {
             name: "LA Travel",
             company: "Coach Hire Operator",
             rating: 5,
-            comment: "We have been using Compare Transport for only 3 weeks and we have had an excellent experience so far. We have made over GBP 9000 worth of bookings from clients."
+            comment: "We have been using Compare Transport for only 3 weeks and we have had an excellent experience so far. We have made over £9000 worth of bookings from clients."
         },
         {
             id: 2,

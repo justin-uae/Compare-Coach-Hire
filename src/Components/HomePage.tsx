@@ -1391,7 +1391,7 @@ const HomePage: React.FC = () => {
                                                     <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
                                                     </svg>
-                                                    Save up to GBP 24
+                                                    Save up to £24
                                                 </span>
                                             </div>
 
@@ -1428,10 +1428,10 @@ const HomePage: React.FC = () => {
                                                         {/* Price */}
                                                         <div className="text-right flex-shrink-0">
                                                             <p className={`text-sm font-black tabular-nums ${co.best ? 'text-emerald-400' : 'text-white'}`}>
-                                                                GBP {co.price}
+                                                                £{co.price}
                                                             </p>
                                                             {co.diff > 0 && (
-                                                                <p className="text-[9px] text-rose-400/90 font-semibold tabular-nums">+GBP {co.diff}</p>
+                                                                <p className="text-[9px] text-rose-400/90 font-semibold tabular-nums">+£{co.diff}</p>
                                                             )}
                                                         </div>
 

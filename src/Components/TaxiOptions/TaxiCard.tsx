@@ -111,10 +111,10 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                                     </div>
                                     <div className="flex items-baseline gap-1.5">
                                         <span className="text-[10px] text-red-500 line-through">
-                                            GBP {originalPrice}
+                                            £{originalPrice}
                                         </span>
                                         <span className="font-bold text-red-600 text-sm">
-                                            GBP {totalPrice}
+                                            £{totalPrice}
                                         </span>
                                     </div>
                                 </div>
@@ -238,10 +238,10 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                                     </div>
                                     <div className="flex items-baseline gap-3">
                                         <span className="text-lg text-red-400 line-through">
-                                            GBP {originalPrice}
+                                            £{originalPrice}
                                         </span>
                                         <span className="text-2xl font-bold text-red-600">
-                                            GBP {totalPrice}
+                                            £{totalPrice}
                                         </span>
                                     </div>
                                     <p className="text-xs text-gray-600 mt-1">

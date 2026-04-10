@@ -28,10 +28,10 @@ export function getFirstVariantId(productId: string): string {
 /**
  * Format price for display
  * @param amount - Price amount as string
- * @param currencyCode - Currency code (e.g., "GBP")
+ * @param currencyCode - Currency code (e.g., "£")
  * @returns Formatted price string
  */
-export function formatPrice(amount: string | number, currencyCode: string = 'GBP'): string {
+export function formatPrice(amount: string | number, currencyCode: string = '£'): string {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     return `${currencyCode} ${numAmount.toFixed(2)}`;
 }

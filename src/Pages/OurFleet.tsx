@@ -109,7 +109,7 @@ const FleetCard: React.FC<{ group: FleetGroup }> = ({ group }) => (
             <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm px-2.5 py-1.5 rounded-xl text-right">
                 <p className="text-white/70 text-[9px] leading-none">from</p>
                 <p className="text-white font-black text-sm leading-tight">
-                    {group.lowestBaseFare > 0 ? `GBP ${group.lowestBaseFare}` : 'POA'}
+                    {group.lowestBaseFare > 0 ? `£${group.lowestBaseFare}` : 'POA'}
                 </p>
             </div>
         </div>

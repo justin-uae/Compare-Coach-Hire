@@ -17,7 +17,9 @@ export const formatDateDisplay = (dateString: string) => {
         return s[(v - 20) % 10] || s[v] || s[0];
     };
 
-    return `${dayNum}${getOrdinal(dayNum)} ${weekday} ${fullYear}`;
+    const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+
+    return `${dayNum}${getOrdinal(dayNum)} ${weekday} ${monthName} ${fullYear}`;
 };
 
 export const formatDate = (date: Date): string => {
@@ -39,7 +41,9 @@ export const formatDateWithOrdinal = (date: Date) => {
         return s[(v - 20) % 10] || s[v] || s[0];
     };
 
-    return `${day}${getOrdinal(day)} ${weekday} ${year}`;
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
+
+    return `${day}${getOrdinal(day)} ${weekday} ${month} ${year}`;
 };
 
 export const generateCalendar = (currentMonthDate: Date) => {

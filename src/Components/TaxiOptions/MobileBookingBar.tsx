@@ -24,7 +24,7 @@ const MobileBookingBar: React.FC<MobileBookingBarProps> = ({ selectedTaxi, dista
                         <div className="text-right">
                             <p className="text-xs text-gray-600">Total Fare</p>
                             <p className="font-bold text-gray-900">
-                                GBP {totalPrice}
+                                £{totalPrice}
                             </p>
                         </div>
                         <button

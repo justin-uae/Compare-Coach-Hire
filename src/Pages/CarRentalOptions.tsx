@@ -134,7 +134,7 @@ function groupProductsForRental(
             company,
             baseFare,
             rentalPrice,
-            currency: 'GBP',
+            currency: '£',
             rating: parseFloat(String(product.rating ?? '4.5')),
             reviews: parseInt(String(product.reviews ?? '0'), 10),
             eta: String(product.eta ?? product.estimatedArrival ?? '5 min').replace(/^"|"$/g, ''),
@@ -219,7 +219,7 @@ const CompanyOfferRow: React.FC<{
 
             <div className="text-right flex-shrink-0">
                 <div className="text-[12px] text-red-400 line-through">
-                    GBP {(offer.rentalPrice * 1.15).toFixed(0)}
+                    £{(offer.rentalPrice * 1.15).toFixed(0)}
                 </div>
                 <div className={`text-sm font-black ${isCheapest ? 'text-red-700' : 'text-red-500'}`}>
                     {offer.currency}{offer.rentalPrice}
@@ -270,9 +270,9 @@ const VehicleRentalCard: React.FC<{
                     {group.vehicleType}
                 </div>
                 <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl text-right">
-                    <p className="text-white font-black text-base leading-tight">GBP {lowestRentalPrice}</p>
+                    <p className="text-white font-black text-base leading-tight">£{lowestRentalPrice}</p>
                     {savings > 0 && (
-                        <p className="text-emerald-300 text-[10px] font-semibold">save GBP {savings}</p>
+                        <p className="text-emerald-300 text-[10px] font-semibold">save £{savings}</p>
                     )}
                 </div>
             </div>

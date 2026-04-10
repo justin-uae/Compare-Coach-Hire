@@ -237,7 +237,7 @@ export const createCart = async (
             { key: 'Return Time', value: cartItem.search.dropoffTime || '' },
             { key: 'Total Hours', value: `${cartItem.search.rentalHours?.toFixed(1) || 0} hours` },
             { key: 'Number of Days', value: `${cartItem.search.numberOfDays || 1} day${(cartItem.search.numberOfDays || 1) > 1 ? 's' : ''}` },
-            { key: 'Total Amount', value: `GBP ${cartItem.totalPrice}` }
+            { key: 'Total Amount', value: `£${cartItem.totalPrice}` }
         );
 
         // Add flight number if provided
@@ -252,7 +252,7 @@ export const createCart = async (
             { key: 'Departure Date', value: formatDateToReadable(cartItem.search.date) },
             { key: 'Departure Time', value: cartItem.search.time },
             { key: 'Distance', value: `${Math.round(cartItem.search.distance || 0)} miles` },
-            { key: 'Total Amount', value: `GBP ${cartItem.totalPrice}` }
+            { key: 'Total Amount', value: `£${cartItem.totalPrice}` }
         );
 
         if (isReturn && cartItem.search.returnDate) {
@@ -290,9 +290,9 @@ Duration: ${hours.toFixed(1)} hours (${days} day${days > 1 ? 's' : ''})
 Passengers: ${cartItem.search.passengers || 1}
 
 Fare Calculation:
-${days > 1 ? `Daily Rate: GBP ${pricePerDay}
-Quantity: ${days} day${days > 1 ? 's' : ''}` : `Rate: GBP ${pricePerDay}`}
-Total Fare: GBP ${cartItem.totalPrice}${isAirportTrip && parkingFeeVariantId ? `
+${days > 1 ? `Daily Rate: £${pricePerDay}
+Quantity: ${days} day${days > 1 ? 's' : ''}` : `Rate: £${pricePerDay}`}
+Total Fare: £${cartItem.totalPrice}${isAirportTrip && parkingFeeVariantId ? `
 + Airport Parking Fee - ${cartItem.taxi.type} (see line items)` : ''}`;
     } else if (isReturn) {
         note = `Round Trip Transport Booking: ${cartItem.taxi.name}
@@ -312,9 +312,9 @@ Date: ${formatDateToReadable(cartItem.search.returnDate || '')}
 Time: ${cartItem.search.returnTime || 'N/A'}
 
 Fare Calculation:
-Trip Fare (${Math.round(cartItem.search.distance || 0)} miles): GBP ${cartItem.totalPrice / 2}
+Trip Fare (${Math.round(cartItem.search.distance || 0)} miles): £${cartItem.totalPrice / 2}
 Quantity: 2 trips (Round Trip)
-Total Fare: GBP ${cartItem.totalPrice}${isAirportTrip && parkingFeeVariantId ? `
+Total Fare: £${cartItem.totalPrice}${isAirportTrip && parkingFeeVariantId ? `
 + Airport Parking Fee - ${cartItem.taxi.type} (see line items)` : ''}`;
     } else {
         note = `Transport Booking: ${cartItem.taxi.name}
@@ -327,9 +327,9 @@ Distance: ${Math.round(cartItem.search.distance || 0)} miles
 Pickup: ${formatDateToReadable(cartItem.search.date)} at ${cartItem.search.time}
 
 Fare Calculation:
-Base Fare: GBP ${cartItem.taxi.baseFare}
-Distance Charge: ${Math.round(cartItem.search.distance || 0)} miles × GBP ${cartItem.taxi.perKmRate}/miles = GBP ${((cartItem.search.distance || 0) * cartItem.taxi.perKmRate).toFixed(2)}
-Total Fare: GBP ${cartItem.totalPrice}${isAirportTrip && parkingFeeVariantId ? `
+Base Fare: £${cartItem.taxi.baseFare}
+Distance Charge: ${Math.round(cartItem.search.distance || 0)} miles × £${cartItem.taxi.perKmRate}/miles = £${((cartItem.search.distance || 0) * cartItem.taxi.perKmRate).toFixed(2)}
+Total Fare: £${cartItem.totalPrice}${isAirportTrip && parkingFeeVariantId ? `
 + Airport Parking Fee - ${cartItem.taxi.type} (see line items)` : ''}`;
     }
 
